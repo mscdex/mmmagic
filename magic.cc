@@ -1,4 +1,5 @@
 #include <node.h>
+#include <node_buffer.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -11,7 +12,9 @@ struct Baton {
     uv_work_t request;
     Persistent<Function> callback;
 
-    char* filepath;
+    char* data;
+    uint32_t dataLen;
+    bool dataIsPath;
 
     // libmagic handle
     struct magic_set *magic;
@@ -86,7 +89,7 @@ class Magic : public ObjectWrap {
       return args.This();
     }
 
-    static Handle<Value> Detect(const Arguments& args) {
+    static Handle<Value> DetectFile(const Arguments& args) {
       HandleScope scope;
       Magic* obj = ObjectWrap::Unwrap<Magic>(args.This());
 
@@ -107,7 +110,44 @@ class Magic : public ObjectWrap {
       baton->error = false;
       baton->request.data = baton;
       baton->callback = Persistent<Function>::New(callback);
-      baton->filepath = strdup((const char*)*str);
+      baton->data = strdup((const char*)*str);
+      baton->dataIsPath = true;
+      baton->magic = obj->magic;
+
+      int status = uv_queue_work(uv_default_loop(), &baton->request,
+                                 Magic::DetectWork, Magic::DetectAfter);
+      assert(status == 0);
+
+      return Undefined();
+    }
+
+    static Handle<Value> Detect(const Arguments& args) {
+      HandleScope scope;
+      Magic* obj = ObjectWrap::Unwrap<Magic>(args.This());
+
+      if (args.Length() < 2) {
+        return ThrowException(Exception::TypeError(
+            String::New("Expecting 2 arguments")));
+      }
+      if (!Buffer::HasInstance(args[0])) {
+        return ThrowException(Exception::TypeError(
+            String::New("First argument must be a Buffer")));
+      }
+      if (!args[1]->IsFunction()) {
+        return ThrowException(Exception::TypeError(
+            String::New("Second argument must be a callback function")));
+      }
+
+      Local<Function> callback = Local<Function>::Cast(args[1]);
+      Local<Object> buffer_obj = args[0]->ToObject();
+
+      Baton* baton = new Baton();
+      baton->error = false;
+      baton->request.data = baton;
+      baton->callback = Persistent<Function>::New(callback);
+      baton->data = Buffer::Data(buffer_obj);
+      baton->dataLen = Buffer::Length(buffer_obj);
+      baton->dataIsPath = false;
       baton->magic = obj->magic;
 
       int status = uv_queue_work(uv_default_loop(), &baton->request,
@@ -120,7 +160,12 @@ class Magic : public ObjectWrap {
     static void DetectWork(uv_work_t* req) {
       Baton* baton = static_cast<Baton*>(req->data);
 
-      baton->result = magic_file(baton->magic, baton->filepath);
+      if (baton->dataIsPath)
+        baton->result = magic_file(baton->magic, baton->data);
+      else {
+        baton->result = magic_buffer(baton->magic, (const void*)baton->data,
+                                     baton->dataLen);
+      }
 
       if (baton->result == NULL) {
         baton->error = true;
@@ -155,7 +200,8 @@ class Magic : public ObjectWrap {
           node::FatalException(try_catch);
       }
 
-      free(baton->filepath);
+      if (baton->dataIsPath)
+        free(baton->data);
       baton->callback.Dispose();
       delete baton;
     }
@@ -170,6 +216,7 @@ class Magic : public ObjectWrap {
       constructor->InstanceTemplate()->SetInternalFieldCount(1);
       constructor->SetClassName(name);
 
+      NODE_SET_PROTOTYPE_METHOD(constructor, "detectFile", DetectFile);
       NODE_SET_PROTOTYPE_METHOD(constructor, "detect", Detect);
 
       target->Set(name, constructor->GetFunction());

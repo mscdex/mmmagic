@@ -26,7 +26,7 @@ Examples
   var Magic = require('mmmagic').Magic;
 
   var magic = new Magic();
-  magic.detect(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
+  magic.detectFile(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
       if (err) throw err;
       console.log(result);
       // output: Python script, ASCII text executable
@@ -38,7 +38,7 @@ Examples
         Magic = mmm.Magic;
 
   var magic = new Magic(mmm.MAGIC_MIME_TYPE);
-  magic.detect(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
+  magic.detectFile(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
       if (err) throw err;
       console.log(result);
       // output: text/x-python
@@ -51,12 +51,25 @@ Examples
 
   var magic = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
   // the above flags can also be shortened down to just: mmm.MAGIC_MIME
-  magic.detect(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
+  magic.detectFile(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
       if (err) throw err;
       console.log(result);
       // output: text/x-python; charset=us-ascii
   });
+```
+* Get general description of the contents of a Buffer:
+```javascript
+  var Magic = require('mmmagic').Magic;
 
+  var magic = new Magic(),
+        buf = new Buffer('import Options\nfrom os import unlink, symlink');
+  
+  magic.detect(buf, function(err, result) {
+      if (err) throw err;
+      console.log(result);
+      // output: Python script, ASCII text executable
+  });
+```
 
 API
 ===
@@ -90,4 +103,6 @@ Magic methods
     * **MAGIC\_NO\_CHECK\_TOKENS** - Don't check tokens
     * **MAGIC\_NO\_CHECK\_ENCODING** - Don't check text encodings
 
-* **detect**(<_String_>path, <_Function_>callback) - _(void)_ - Inspects the file pointed at by path. The callback receives two arguments: an <_Error_> object in case of error (null otherwise), and a <_String_> containing the result of the inspection.
+* **detectFile**(<_String_>path, <_Function_>callback) - _(void)_ - Inspects the file pointed at by path. The callback receives two arguments: an <_Error_> object in case of error (null otherwise), and a <_String_> containing the result of the inspection.
+
+* **detect**(<_Buffer_>data, <_Function_>callback) - _(void)_ - Inspects the contents of data. The callback receives two arguments: an <_Error_> object in case of error (null otherwise), and a <_String_> containing the result of the inspection.
