@@ -35,7 +35,7 @@ Examples
 * Get mime type for a file:
 ```javascript
   var mmm = require('mmmagic'),
-      Magic = mmm.Magic;
+        Magic = mmm.Magic;
 
   var magic = new Magic(mmm.MAGIC_MIME_TYPE);
   magic.detect(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
@@ -47,7 +47,7 @@ Examples
 * Get mime type and mime encoding for a file:
 ```javascript
   var mmm = require('mmmagic'),
-      Magic = mmm.Magic;
+        Magic = mmm.Magic;
 
   var magic = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
   // the above flags can also be shortened down to just: mmm.MAGIC_MIME
@@ -64,7 +64,7 @@ API
 Magic methods
 -------------
 
-* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use (if not specified, the `MAGIC` env var is checked, then libmagic will search various paths on the file system (see `man file`)). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
+* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use (order of magic file searching: magicPath -> `MAGIC` env var -> various file system paths (see `man file`)). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
 
     * **MAGIC\_NONE** - No flags set
     * **MAGIC\_DEBUG** - Turn on debugging
