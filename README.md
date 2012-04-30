@@ -52,9 +52,9 @@ Examples
   var magic = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
   // the above flags can also be shortened down to just: mmm.MAGIC_MIME
   magic.detect(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
-       if (err) throw err;
-       console.log(result);
-       // output: text/x-python; charset=us-ascii
+      if (err) throw err;
+      console.log(result);
+      // output: text/x-python; charset=us-ascii
   });
 
 
