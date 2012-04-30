@@ -2,7 +2,7 @@
 Description
 ===========
 
-An async libmagic binding for [node.js](http://nodejs.org/) for detecting file content types.
+An async libmagic binding for [node.js](http://nodejs.org/) for detecting content types by data inspection.
 
 
 Requirements
