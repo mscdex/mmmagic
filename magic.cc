@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+# ifndef _delayimp_h 
+   extern "C" IMAGE_DOS_HEADER __ImageBase; 
+# endif 
+#endif
+
 #include "magic.h"
 
 using namespace node;
@@ -27,23 +33,38 @@ struct Baton {
 
 static Persistent<FunctionTemplate> constructor;
 
-const char* ToCString(const String::Utf8Value& value) {
-  return *value ? *value : "<string conversion failed>";
-}
-
 class Magic : public ObjectWrap {
   public:
     struct magic_set *magic;
 
     Magic(const char* magicfile, int mflags) {
+      HandleScope;
+      if (magicfile != NULL) {
+        /* Windows blows up trying to look up the path '(null)' returned by
+           magic_getpath() */
+        if (strncmp(magicfile, "(null)", 6) == 0)
+          magicfile = NULL;
+      }
       magic = magic_open(mflags);
       if (magic == NULL)
         ThrowException(Exception::Error(String::New(uv_strerror(uv_last_error(uv_default_loop())))));
-      if (magic_load(magic, magicfile) == -1) {
-        Local<String> errstr = String::New(magic_error(magic));
-        magic_close(magic);
-        magic = NULL;
-        ThrowException(Exception::Error(errstr));
+      if (magic_load(magic, NULL) == -1) {
+#ifdef _WIN32
+        /* Use magic file contained in addon distribution as last resort */
+        char addonPath[MAX_PATH];
+        GetModuleFileName((HMODULE)&__ImageBase, addonPath, sizeof(addonPath));
+        (strrchr(addonPath, '\\'))[0] = 0;
+        (strrchr(addonPath, '\\'))[1] = 0;
+        strcat(addonPath, "magic\\magic");
+        if (magic_load(magic, addonPath) == -1) {
+#endif
+          Local<String> errstr = String::New(magic_error(magic));
+          magic_close(magic);
+          magic = NULL;
+          ThrowException(Exception::Error(errstr));
+#ifdef _WIN32
+        }
+#endif
       }
     }
     ~Magic() {
@@ -59,14 +80,14 @@ class Magic : public ObjectWrap {
 
       if (!args.IsConstructCall()) {
         return ThrowException(Exception::TypeError(
-            String::New("Use the new operator to create instances of this object."))
+            String::New("Use `new` to create instances of this object."))
         );
       }
 
       if (args.Length() > 0) {
         if (args[0]->IsString()) {
           String::Utf8Value str(args[0]->ToString());
-          path = strdupa((const char*)(*str));
+          path = strdup((const char*)(*str));
         } else if (args[0]->IsInt32())
           mflags = args[0]->Int32Value();
         else {
@@ -78,6 +99,7 @@ class Magic : public ObjectWrap {
         if (args[1]->IsInt32())
           mflags = args[1]->Int32Value();
         else {
+          free(path);
           return ThrowException(Exception::TypeError(
               String::New("Second argument must be an integer")));
         }
@@ -85,6 +107,9 @@ class Magic : public ObjectWrap {
 
       Magic* obj = new Magic(magic_getpath(path, 0/*FILE_LOAD*/), mflags);
       obj->Wrap(args.This());
+
+      if (path)
+        free(path);
 
       return args.This();
     }
