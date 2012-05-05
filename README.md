@@ -9,7 +9,7 @@ Requirements
 ============
 
 * [node.js](http://nodejs.org/) -- v0.4.0 or newer
-* zlib
+* zlib (*nix only)
 
 
 Install
@@ -77,7 +77,7 @@ API
 Magic methods
 -------------
 
-* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use (order of magic file searching: magicPath -> `MAGIC` env var -> various file system paths (see `man file`)). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
+* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use (order of magic file searching: magicPath -> `MAGIC` env var -> various file system paths (see `man file`)). On Windows, if no magic files are found after searching, mmmagic will default to the magic file contained in this package (for convenience). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
 
     * **MAGIC\_NONE** - No flags set
     * **MAGIC\_DEBUG** - Turn on debugging
