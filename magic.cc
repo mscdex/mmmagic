@@ -38,7 +38,7 @@ class Magic : public ObjectWrap {
     struct magic_set *magic;
 
     Magic(const char* magicfile, int mflags) {
-      HandleScope;
+      HandleScope scope;
       if (magicfile != NULL) {
         /* Windows blows up trying to look up the path '(null)' returned by
            magic_getpath() */
@@ -99,7 +99,8 @@ class Magic : public ObjectWrap {
         if (args[1]->IsInt32())
           mflags = args[1]->Int32Value();
         else {
-          free(path);
+          if (path)
+            free(path);
           return ThrowException(Exception::TypeError(
               String::New("Second argument must be an integer")));
         }
