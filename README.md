@@ -8,7 +8,7 @@ An async libmagic binding for [node.js](http://nodejs.org/) for detecting conten
 Requirements
 ============
 
-* [node.js](http://nodejs.org/) -- v0.4.0 or newer
+* [node.js](http://nodejs.org/) -- v0.6.0 or newer
 * zlib (*nix only)
 
 
