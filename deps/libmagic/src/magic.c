@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  */
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #include <windows.h>
 #include <shlwapi.h>
 #endif
@@ -39,7 +39,9 @@ FILE_RCSID("@(#)$File: magic.c,v 1.74 2011/05/26 01:27:59 christos Exp $")
 #include "magic.h"
 
 #include <stdlib.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <string.h>
 #ifdef QUICK
 #include <sys/mman.h>
@@ -168,8 +170,8 @@ out:
 	}
 
 	/* Third, try to get magic file relative to dll location */
-	LPTSTR dllpath = malloc(sizeof(*dllpath) * (MAX_PATH + 1));
-	dllpath[MAX_PATH] = 0;	/* just in case long path gets truncated and not null terminated */
+	/*LPTSTR dllpath = malloc(sizeof(*dllpath) * (MAX_PATH + 1));
+	dllpath[MAX_PATH] = 0;	// just in case long path gets truncated and not null terminated
 	if (GetModuleFileNameA(NULL, dllpath, MAX_PATH)){
 		PathRemoveFileSpecA(dllpath);
 		if (strlen(dllpath) > 3 &&
@@ -185,7 +187,7 @@ out:
 			    "%s/magic.mgc", dllpath) >= 0)
 				APPENDPATH();
 		}
-	}
+	}*/
 
 	/* Don't put MAGIC constant - it likely points to a file within MSys
 	tree */

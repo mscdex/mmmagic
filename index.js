@@ -1,12 +1,11 @@
-var Magic;
+var path = require('path');
 
-if (process.platform === 'win32')
-  Magic = require('./win32/magic').Magic;
-else
-  Magic = require('./magic').Magic;
+var Magic = require('./build/Release/magic');
+
+Magic.setFallback(__dirname + path.sep + 'magic' + path.sep + 'magic');
 
 module.exports = {
-  Magic: Magic,
+  Magic: Magic.Magic,
   MAGIC_NONE: 0x000000, /* No flags */
   MAGIC_DEBUG: 0x000001, /* Turn on debugging */
   MAGIC_SYMLINK: 0x000002, /* Follow symlinks (default) */

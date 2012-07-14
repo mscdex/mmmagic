@@ -47,7 +47,9 @@ FILE_RCSID("@(#)$File: apprentice.c,v 1.173 2011/12/08 12:38:24 rrt Exp $")
 #ifdef QUICK
 #include <sys/mman.h>
 #endif
+#ifdef HAVE_DIRENT_H
 #include <dirent.h>
+#endif
 
 #define	EATAB {while (isascii((unsigned char) *l) && \
 		      isspace((unsigned char) *l))  ++l;}

@@ -37,6 +37,39 @@
 #include <config.h>
 #endif
 
+#ifdef _MSC_VER
+typedef unsigned int mode_t;
+# ifdef _WIN64
+   typedef __int64 ssize_t;
+   typedef unsigned __int64 size_t;
+# else
+   typedef _W64 int ssize_t;
+   typedef _W64 unsigned int size_t;
+# endif
+# include <io.h>
+#	define access _access
+# define lseek _lseek
+# define read _read
+# define	X_OK	1	/* MS access() doesn't check for execute permission. */
+# define	W_OK	2	/* Check for write permission */
+# define	R_OK	4	/* Check for read permission */
+# include <sys/utime.h>
+/*# define S_ISREG(mode)  (((mode) & S_IFMT) == S_IFREG)
+# define S_ISFIFO(mode) (((mode) & S_IFMT) == _S_IFIFO)*/
+# include <dirent.h>
+# undef S_IFLNK
+# undef S_IFSOCK
+# ifndef S_IFFIFO
+#  ifdef _S_IFIFO
+#   define S_IFFIFO _S_IFIFO
+#  else
+#   define S_IFFIFO 0
+#  endif
+# endif
+# define strtoull _strtoui64
+# define STDIN_FILENO 0
+#endif
+
 #ifdef WIN32
   #ifdef _WIN64
     #define SIZE_T_FORMAT "I64"
@@ -63,7 +96,9 @@
 #endif
 #include <regex.h>
 #include <sys/types.h>
+#ifndef _MSC_VER
 #include <sys/param.h>
+#endif
 /* Do this here and now, because struct stat gets re-defined on solaris */
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -124,6 +159,7 @@
 
 #define MAGICNO		0xF11E041C
 #define VERSIONNO	8
+#define VERSION	8.30
 #define FILE_MAGICSIZE	232
 
 #define	FILE_LOAD	0

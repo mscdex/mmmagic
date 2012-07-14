@@ -45,7 +45,7 @@ FILE_RCSID("@(#)$File: compress.c,v 1.68 2011/12/08 12:38:24 rrt Exp $")
 #endif
 #include <string.h>
 #include <errno.h>
-#ifndef __MINGW32__
+#ifndef _MSC_VER
 #include <sys/ioctl.h>
 #endif
 #ifdef HAVE_SYS_WAIT_H

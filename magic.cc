@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 # ifndef _delayimp_h 
    extern "C" IMAGE_DOS_HEADER __ImageBase; 
 # endif 
@@ -32,6 +32,7 @@ struct Baton {
 };
 
 static Persistent<FunctionTemplate> constructor;
+static Persistent<String> fallbackPath;
 
 class Magic : public ObjectWrap {
   public:
@@ -45,26 +46,23 @@ class Magic : public ObjectWrap {
         if (strncmp(magicfile, "(null)", 6) == 0)
           magicfile = NULL;
       }
-      magic = magic_open(mflags);
+      magic = magic_open(mflags | MAGIC_NO_CHECK_COMPRESS);
       if (magic == NULL)
         ThrowException(Exception::Error(String::New(uv_strerror(uv_last_error(uv_default_loop())))));
       if (magic_load(magic, NULL) == -1) {
-#ifdef _WIN32
         /* Use magic file contained in addon distribution as last resort */
-        char addonPath[MAX_PATH];
+        /*char addonPath[MAX_PATH];
         GetModuleFileName((HMODULE)&__ImageBase, addonPath, sizeof(addonPath));
-        (strrchr(addonPath, '\\'))[0] = 0;
-        (strrchr(addonPath, '\\'))[1] = 0;
-        strcat(addonPath, "magic\\magic");
-        if (magic_load(magic, addonPath) == -1) {
-#endif
+        (strrchr(addonPath, PATHSEP))[0] = 0;
+        (strrchr(addonPath, PATHSEP))[1] = 0;
+        strcat(addonPath, LOCALPATH);*/
+        String::Utf8Value fbpathstr(fallbackPath);
+        if (magic_load(magic, *fbpathstr) == -1) {
           Local<String> errstr = String::New(magic_error(magic));
           magic_close(magic);
           magic = NULL;
           ThrowException(Exception::Error(errstr));
-#ifdef _WIN32
         }
-#endif
       }
     }
     ~Magic() {
@@ -75,7 +73,11 @@ class Magic : public ObjectWrap {
 
     static Handle<Value> New(const Arguments& args) {
       HandleScope scope;
+#ifndef _MSC_VER
       int mflags = MAGIC_SYMLINK;
+#else
+      int mflags = MAGIC_NONE;
+#endif
       char* path = NULL;
 
       if (!args.IsConstructCall()) {
@@ -232,6 +234,19 @@ class Magic : public ObjectWrap {
       delete baton;
     }
 
+    static Handle<Value> SetFallback(const Arguments& args) {
+      HandleScope scope;
+
+      if (!fallbackPath.IsEmpty()) {
+        fallbackPath.Dispose();
+        fallbackPath.Clear();
+      }
+
+      fallbackPath = Persistent<String>::New(args[0]->ToString());
+
+      return Undefined();
+    }
+
     static void Initialize(Handle<Object> target) {
       HandleScope scope;
 
@@ -244,6 +259,8 @@ class Magic : public ObjectWrap {
 
       NODE_SET_PROTOTYPE_METHOD(constructor, "detectFile", DetectFile);
       NODE_SET_PROTOTYPE_METHOD(constructor, "detect", Detect);
+      target->Set(String::NewSymbol("setFallback"),
+        FunctionTemplate::New(SetFallback)->GetFunction());
 
       target->Set(name, constructor->GetFunction());
     }

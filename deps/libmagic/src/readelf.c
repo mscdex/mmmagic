@@ -1042,7 +1042,8 @@ dophn_exec(struct magic_set *ms, int clazz, int swap, int fd, off_t off,
 	const char *shared_libraries = "";
 	unsigned char nbuf[BUFSIZ];
 	ssize_t bufsize;
-	size_t offset, align;
+	size_t offset;
+  size_t align;
 	
 	if (size != xph_sizeof) {
 		if (file_printf(ms, ", corrupted program header size") == -1)
