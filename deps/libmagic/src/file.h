@@ -54,8 +54,6 @@ typedef unsigned int mode_t;
 # define	W_OK	2	/* Check for write permission */
 # define	R_OK	4	/* Check for read permission */
 # include <sys/utime.h>
-/*# define S_ISREG(mode)  (((mode) & S_IFMT) == S_IFREG)
-# define S_ISFIFO(mode) (((mode) & S_IFMT) == _S_IFIFO)*/
 # include <dirent.h>
 # undef S_IFLNK
 # undef S_IFSOCK
@@ -159,7 +157,6 @@ typedef unsigned int mode_t;
 
 #define MAGICNO		0xF11E041C
 #define VERSIONNO	8
-#define VERSION	8.30
 #define FILE_MAGICSIZE	232
 
 #define	FILE_LOAD	0
