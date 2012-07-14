@@ -7,20 +7,36 @@
       'dependencies': [
         'pcre/binding.gyp:pcre_lib',
       ],
-      'libraries': [
-        'shlwapi.lib'
+      'defines': [ 'HAVE_CONFIG_H' ],
+      'conditions': [
+        [ 'OS=="win"', {
+          'sources': [
+            'src/asprintf.c',
+            'src/strlcat.c',
+            'src/strlcpy.c',
+            'src/getline.c',
+          ],
+          'include_dirs': [ 'msvc' ],
+          'defines': [
+            'WIN32', '_WIN32', '_USE_32BIT_TIME_T'
+          ],
+          'libraries': [
+            'shlwapi.lib'
+          ],
+        }],
+        [ 'OS=="linux"', {
+          'sources': [
+            'src/strlcat.c',
+            'src/strlcpy.c',
+          ],
+        }]
       ],
-      'defines': [ 'WIN32', '_WIN32', 'HAVE_CONFIG_H', '_USE_32BIT_TIME_T' ],
-      'direct_dependent_settings': {
-        'include_dirs': [ '.', 'src', 'pcre' ],
-        'defines': [ 'WIN32', '_WIN32', 'HAVE_CONFIG_H', '_USE_32BIT_TIME_T' ],
-      },
+      #'direct_dependent_settings': {
+      #  'include_dirs': [ '.', 'src', 'pcre' ],
+      #  'defines': [ 'WIN32', '_WIN32', 'HAVE_CONFIG_H', '_USE_32BIT_TIME_T' ],
+      #},
       'cflags': [ '-O3' ],
       'sources': [
-        'src/asprintf.c',
-        'src/strlcat.c',
-        'src/strlcpy.c',
-        'src/getline.c',
         'src/magic.c',
         'src/apprentice.c',
         'src/softmagic.c',
