@@ -90,7 +90,6 @@ Magic methods
     * **MAGIC\_CHECK** - Print warnings to stderr
     * **MAGIC\_PRESERVE\_ATIME** - Restore access time on exit
     * **MAGIC\_RAW** - Don't translate unprintable chars
-    * **MAGIC\_ERROR** - Handle ENOENT etc as real errors
     * **MAGIC\_MIME\_ENCODING** - Return the MIME encoding
     * **MAGIC\_MIME** - (**MAGIC\_MIME\_TYPE** | **MAGIC\_MIME\_ENCODING**)
     * **MAGIC\_APPLE** - Return the Apple creator and type
