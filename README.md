@@ -9,7 +9,6 @@ Requirements
 ============
 
 * [node.js](http://nodejs.org/) -- v0.6.0 or newer
-* zlib (*nix only)
 
 
 Install
@@ -26,10 +25,11 @@ Examples
   var Magic = require('mmmagic').Magic;
 
   var magic = new Magic();
-  magic.detectFile(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
+  magic.detectFile('node_modules/mmmagic/build/Release/magic.node', function(err, result) {
       if (err) throw err;
       console.log(result);
-      // output: Python script, ASCII text executable
+      // output on Windows with 32-bit node:
+      //    PE32 executable (DLL) (GUI) Intel 80386, for MS Windows
   });
 ```
 * Get mime type for a file:
@@ -38,10 +38,11 @@ Examples
         Magic = mmm.Magic;
 
   var magic = new Magic(mmm.MAGIC_MIME_TYPE);
-  magic.detectFile(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
+  magic.detectFile('node_modules/mmmagic/build/Release/magic.node', function(err, result) {
       if (err) throw err;
       console.log(result);
-      // output: text/x-python
+      // output on Windows with 32-bit node:
+      //    application/x-dosexec
   });
 ```
 * Get mime type and mime encoding for a file:
@@ -54,7 +55,8 @@ Examples
   magic.detectFile(__dirname + '/node_modules/mmmagic/wscript', function(err, result) {
       if (err) throw err;
       console.log(result);
-      // output: text/x-python; charset=us-ascii
+      // output on Windows with 32-bit node:
+      //    application/x-dosexec; charset=binary
   });
 ```
 * Get general description of the contents of a Buffer:
@@ -77,12 +79,11 @@ API
 Magic methods
 -------------
 
-* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use (order of magic file searching: magicPath -> `MAGIC` env var -> various file system paths (see `man file`)). On Windows, if no magic files are found after searching, mmmagic will default to the magic file contained in this package (for convenience). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
+* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use (order of magic file searching: magicPath -> `MAGIC` env var -> various file system paths (see `man file`)). If no magic files are found after searching, mmmagic will default to the magic file contained in this package. flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
 
     * **MAGIC\_NONE** - No flags set
     * **MAGIC\_DEBUG** - Turn on debugging
-    * **MAGIC\_SYMLINK** - Follow symlinks **(default)**
-    * **MAGIC\_COMPRESS** - Check inside compressed files
+    * **MAGIC\_SYMLINK** - Follow symlinks **(default for non-Windows)**
     * **MAGIC\_DEVICES** - Look at the contents of devices
     * **MAGIC\_MIME_TYPE** - Return the MIME type
     * **MAGIC\_CONTINUE** - Return all matches
@@ -93,7 +94,6 @@ Magic methods
     * **MAGIC\_MIME\_ENCODING** - Return the MIME encoding
     * **MAGIC\_MIME** - (**MAGIC\_MIME\_TYPE** | **MAGIC\_MIME\_ENCODING**)
     * **MAGIC\_APPLE** - Return the Apple creator and type
-    * **MAGIC\_NO\_CHECK\_COMPRESS** - Don't check for compressed files
     * **MAGIC\_NO\_CHECK\_TAR** - Don't check for tar files
     * **MAGIC\_NO\_CHECK\_SOFT** - Don't check magic entries
     * **MAGIC\_NO\_CHECK\_APPTYPE** - Don't check application type
