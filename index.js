@@ -2,7 +2,9 @@ var path = require('path');
 
 var Magic = require('./build/Release/magic');
 
-Magic.setFallback(__dirname + path.sep + 'magic' + path.sep + 'magic');
+var sep = path.sep || path.SPLIT_CHAR;
+
+Magic.setFallback(__dirname + sep + 'magic' + sep + 'magic');
 
 module.exports = {
   Magic: Magic.Magic,
