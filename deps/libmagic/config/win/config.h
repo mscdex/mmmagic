@@ -58,7 +58,7 @@
 #undef HAVE_LIBGNURX
 
 /* Define to 1 if you have the `z' library (-lz). */
-#undef HAVE_LIBZ
+/* #undef HAVE_LIBZ */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
@@ -190,7 +190,7 @@
 #undef HAVE_WCWIDTH
 
 /* Define to 1 if you have the <zlib.h> header file. */
-#undef HAVE_ZLIB_H
+/* #undef HAVE_ZLIB_H */
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */

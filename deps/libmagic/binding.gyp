@@ -6,8 +6,9 @@
       'include_dirs': [ '.', 'src', 'pcre' ],
       'dependencies': [
         'pcre/binding.gyp:pcre_lib',
+        'zlib/zlib.gyp:zlib',
       ],
-      'defines': [ 'HAVE_CONFIG_H' ],
+      'defines': [ 'HAVE_CONFIG_H', 'HAVE_ZLIB_H', 'HAVE_LIBZ' ],
       'conditions': [
         [ 'OS=="win"', {
           'sources': [
