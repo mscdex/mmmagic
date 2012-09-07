@@ -3,7 +3,7 @@
     {
       'target_name': 'magic',
       'sources': [
-        'magic.cc',
+        'src/magic.cc',
       ],
       'include_dirs': [
         'deps/libmagic/src',
