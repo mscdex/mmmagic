@@ -27,7 +27,6 @@
         'pcre_fullinfo.c',
         'pcre_get.c',
         'pcre_globals.c',
-        #'pcre_info.c',
         'pcre_internal.h',
         'pcre_maketables.c',
         'pcre_newline.c',
@@ -36,7 +35,6 @@
         'pcre_scanner.h',
         'pcre_study.c',
         'pcre_tables.c',
-        #'pcre_try_flipped.c',
         'pcre_ucd.c',
         'pcre_valid_utf8.c',
         'pcre_version.c',
@@ -46,18 +44,32 @@
         'pcreposix.c',
         'pcreposix.h',
         'ucp.h',
-        #'<(SHARED_INTERMEDIATE_DIR)/pcre_chartables.c',
         'pcre_chartables.c', 
         # C plusplus sourcews
         'pcrecpp.cc',
         'pcre_scanner.cc',
-        #'pcre_stringpiece.cc',
       ],
       'msvs_settings': {
         'VCCLCompilerTool': {
           'AdditionalOptions': ['/wd4018', '/wd4996'],
         },
       },
+      'conditions': [
+        [ 'OS=="win"', {
+          'include_dirs': [ 'config/win' ],
+        }],
+        [ 'OS=="linux"', {
+          'include_dirs': [ 'config/linux' ],
+        }],
+        [ 'OS=="mac"', {
+          'include_dirs': [ 'config/mac' ],
+        }],
+        [ 'OS=="freebsd"', {
+          'include_dirs': [
+            'config/freebsd',
+          ],
+        }],
+      ],
       'all_dependent_settings': {
         'defines': [
           'LINK_SIZE=2',

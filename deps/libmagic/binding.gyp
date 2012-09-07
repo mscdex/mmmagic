@@ -16,7 +16,7 @@
             'src/strlcpy.c',
             'src/getline.c',
           ],
-          'include_dirs': [ 'msvc' ],
+          'include_dirs': [ 'msvc', 'config/win' ],
           'defines': [
             'WIN32', '_WIN32', '_USE_32BIT_TIME_T'
           ],
@@ -29,12 +29,17 @@
             'src/strlcat.c',
             'src/strlcpy.c',
           ],
-        }]
+          'include_dirs': [ 'config/linux' ],
+        }],
+        [ 'OS=="mac"', {
+          'include_dirs': [ 'config/mac' ],
+        }],
+        [ 'OS=="freebsd"', {
+          'include_dirs': [
+            'config/freebsd',
+          ],
+        }],
       ],
-      #'direct_dependent_settings': {
-      #  'include_dirs': [ '.', 'src', 'pcre' ],
-      #  'defines': [ 'WIN32', '_WIN32', 'HAVE_CONFIG_H', '_USE_32BIT_TIME_T' ],
-      #},
       'cflags': [ '-O3' ],
       'sources': [
         'src/magic.c',
