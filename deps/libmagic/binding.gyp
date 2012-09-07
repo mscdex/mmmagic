@@ -1,11 +1,11 @@
 {
   'targets': [
     {
-      'target_name': 'libmagic_lib',
+      'target_name': 'libmagic',
       'type': 'static_library',
       'include_dirs': [ '.', 'src', 'pcre' ],
       'dependencies': [
-        'pcre/binding.gyp:pcre_lib',
+        'pcre/binding.gyp:pcre',
         'zlib/zlib.gyp:zlib',
       ],
       'defines': [ 'HAVE_CONFIG_H', 'HAVE_ZLIB_H', 'HAVE_LIBZ' ],

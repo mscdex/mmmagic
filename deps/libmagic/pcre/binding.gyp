@@ -16,7 +16,7 @@
   },
   'targets': [
     {
-      'target_name': 'pcre_lib',
+      'target_name': 'pcre',
       'type': 'static_library',
       'sources': [
         # C sources
