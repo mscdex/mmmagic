@@ -48,7 +48,7 @@ Examples
 * Get mime type and mime encoding for a file:
 ```javascript
   var mmm = require('mmmagic'),
-        Magic = mmm.Magic;
+      Magic = mmm.Magic;
 
   var magic = new Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_MIME_ENCODING);
   // the above flags can also be shortened down to just: mmm.MAGIC_MIME
