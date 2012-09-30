@@ -92,7 +92,7 @@ typedef unsigned int mode_t;
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
-#include <regex.h>
+#include <pcre/regex.h>
 #include <sys/types.h>
 #ifndef _MSC_VER
 #include <sys/param.h>
