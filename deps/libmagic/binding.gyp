@@ -7,7 +7,7 @@
       'dependencies': [
         'pcre/binding.gyp:pcre',
       ],
-      'defines': [ 'HAVE_CONFIG_H', 'HAVE_ZLIB_H', 'HAVE_LIBZ' ],
+      'defines': [ 'HAVE_CONFIG_H', ],
       'conditions': [
         [ 'OS=="win"', {
           'sources': [
