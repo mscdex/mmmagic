@@ -4,6 +4,9 @@ Description
 
 An async libmagic binding for [node.js](http://nodejs.org/) for detecting content types by data inspection.
 
+**Note:** Currently libmagic is not thread safe, so do not try and use detect*() more than once at a time.
+          I am working on patching libmagic to make it thread safe.
+
 
 Requirements
 ============
