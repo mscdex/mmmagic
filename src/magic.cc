@@ -27,24 +27,7 @@ struct Baton {
 };
 
 static Persistent<FunctionTemplate> constructor;
-const char* fallbackPath;
-
-struct magic_set* init_magic(const char* path, int mflags, char* err) {
-  struct magic_set *magic = magic_open(mflags | MAGIC_NO_CHECK_COMPRESS);
-  if (magic == NULL) {
-    err = strdup(uv_strerror(uv_last_error(uv_default_loop())));
-    return NULL;
-  }
-  if (magic_load(magic, NULL) == -1) {
-    /* Use magic file contained in addon distribution as last resort */
-    if (magic_load(magic, fallbackPath) == -1) {
-      err = strdup(magic_error(magic));
-      magic_close(magic);
-      return NULL;
-    }
-  }
-  return magic;
-}
+static const char* fallbackPath;
 
 class Magic : public ObjectWrap {
   public:
@@ -58,7 +41,7 @@ class Magic : public ObjectWrap {
         if (strncmp(path, "(null)", 6) == 0)
           path = NULL;
       }
-      mpath = path;
+      mpath = (path == NULL ? strdup(fallbackPath) : path);
       mflags = flags;
     }
     ~Magic() {
@@ -76,6 +59,7 @@ class Magic : public ObjectWrap {
       int mflags = MAGIC_NONE;
 #endif
       char* path = NULL;
+      bool use_bundled = true;
 
       if (!args.IsConstructCall()) {
         return ThrowException(Exception::TypeError(
@@ -85,11 +69,15 @@ class Magic : public ObjectWrap {
 
       if (args.Length() > 0) {
         if (args[0]->IsString()) {
+          use_bundled = false;
           String::Utf8Value str(args[0]->ToString());
           path = strdup((const char*)(*str));
         } else if (args[0]->IsInt32())
           mflags = args[0]->Int32Value();
-        else {
+        else if (args[0]->IsBoolean() && !args[0]->BooleanValue()) {
+          use_bundled = false;
+          path = strdup(magic_getpath(NULL, 0/*FILE_LOAD*/));
+        } else {
           return ThrowException(Exception::TypeError(
               String::New("First argument must be a string or integer")));
         }
@@ -105,8 +93,9 @@ class Magic : public ObjectWrap {
         }
       }
 
-      Magic* obj = new Magic(magic_getpath(path, 0/*FILE_LOAD*/), mflags);
+      Magic* obj = new Magic((use_bundled ? NULL : path), mflags);
       obj->Wrap(args.This());
+      obj->Ref();
 
       return args.This();
     }
@@ -130,6 +119,7 @@ class Magic : public ObjectWrap {
 
       Baton* baton = new Baton();
       baton->error = false;
+      baton->error_message = NULL;
       baton->request.data = baton;
       baton->callback = Persistent<Function>::New(callback);
       baton->data = strdup((const char*)*str);
@@ -166,6 +156,7 @@ class Magic : public ObjectWrap {
 
       Baton* baton = new Baton();
       baton->error = false;
+      baton->error_message = NULL;
       baton->request.data = baton;
       baton->callback = Persistent<Function>::New(callback);
       baton->data = Buffer::Data(buffer_obj);
@@ -184,9 +175,17 @@ class Magic : public ObjectWrap {
     static void DetectWork(uv_work_t* req) {
       Baton* baton = static_cast<Baton*>(req->data);
       const char* result;
+      struct magic_set *magic = magic_open(baton->flags | MAGIC_NO_CHECK_COMPRESS);
 
-      struct magic_set* magic = init_magic(baton->path, baton->flags,
-                                           baton->error_message);
+      if (magic == NULL) {
+        baton->error_message = strdup(uv_strerror(
+                                        uv_last_error(uv_default_loop())));
+      } else if (magic_load(magic, baton->path) == -1
+                 && magic_load(magic, fallbackPath) == -1) {
+        baton->error_message = strdup(magic_error(magic));
+        magic_close(magic);
+      }
+
       if (magic == NULL) {
         if (baton->error_message)
           baton->error = true;
