@@ -3,12 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef _MSC_VER
-# ifndef _delayimp_h 
-   extern "C" IMAGE_DOS_HEADER __ImageBase; 
-# endif 
-#endif
-
 #include "magic.h"
 
 using namespace node;
@@ -22,58 +16,61 @@ struct Baton {
     uint32_t dataLen;
     bool dataIsPath;
 
-    // libmagic handle
-    struct magic_set *magic;
+    // libmagic info
+    const char* path;
+    int flags;
 
     bool error;
-    const char* error_message;
+    char* error_message;
 
     const char* result;
 };
 
 static Persistent<FunctionTemplate> constructor;
-static Persistent<String> fallbackPath;
+const char* fallbackPath;
+
+struct magic_set* init_magic(const char* path, int mflags, char* err) {
+  struct magic_set *magic = magic_open(mflags | MAGIC_NO_CHECK_COMPRESS);
+  if (magic == NULL) {
+    err = strdup(uv_strerror(uv_last_error(uv_default_loop())));
+    return NULL;
+  }
+  if (magic_load(magic, NULL) == -1) {
+    /* Use magic file contained in addon distribution as last resort */
+    if (magic_load(magic, fallbackPath) == -1) {
+      err = strdup(magic_error(magic));
+      magic_close(magic);
+      return NULL;
+    }
+  }
+  return magic;
+}
 
 class Magic : public ObjectWrap {
   public:
-    struct magic_set *magic;
+    const char* mpath;
+    int mflags;
 
-    Magic(const char* magicfile, int mflags) {
-      HandleScope scope;
-      if (magicfile != NULL) {
+    Magic(const char* path, int flags) {
+      if (path != NULL) {
         /* Windows blows up trying to look up the path '(null)' returned by
            magic_getpath() */
-        if (strncmp(magicfile, "(null)", 6) == 0)
-          magicfile = NULL;
+        if (strncmp(path, "(null)", 6) == 0)
+          path = NULL;
       }
-      magic = magic_open(mflags | MAGIC_NO_CHECK_COMPRESS);
-      if (magic == NULL)
-        ThrowException(Exception::Error(String::New(uv_strerror(uv_last_error(uv_default_loop())))));
-      if (magic_load(magic, NULL) == -1) {
-        /* Use magic file contained in addon distribution as last resort */
-        /*char addonPath[MAX_PATH];
-        GetModuleFileName((HMODULE)&__ImageBase, addonPath, sizeof(addonPath));
-        (strrchr(addonPath, PATHSEP))[0] = 0;
-        (strrchr(addonPath, PATHSEP))[1] = 0;
-        strcat(addonPath, LOCALPATH);*/
-        String::Utf8Value fbpathstr(fallbackPath);
-        if (magic_load(magic, *fbpathstr) == -1) {
-          Local<String> errstr = String::New(magic_error(magic));
-          magic_close(magic);
-          magic = NULL;
-          ThrowException(Exception::Error(errstr));
-        }
-      }
+      mpath = path;
+      mflags = flags;
     }
     ~Magic() {
-      if (magic != NULL)
-        magic_close(magic);
-      magic = NULL;
+      if (mpath != NULL) {
+        free((void*)mpath);
+        mpath = NULL;
+      }
     }
 
     static Handle<Value> New(const Arguments& args) {
       HandleScope scope;
-#ifndef _MSC_VER
+#ifndef _WIN32
       int mflags = MAGIC_SYMLINK;
 #else
       int mflags = MAGIC_NONE;
@@ -111,9 +108,6 @@ class Magic : public ObjectWrap {
       Magic* obj = new Magic(magic_getpath(path, 0/*FILE_LOAD*/), mflags);
       obj->Wrap(args.This());
 
-      if (path)
-        free(path);
-
       return args.This();
     }
 
@@ -140,7 +134,8 @@ class Magic : public ObjectWrap {
       baton->callback = Persistent<Function>::New(callback);
       baton->data = strdup((const char*)*str);
       baton->dataIsPath = true;
-      baton->magic = obj->magic;
+      baton->path = obj->mpath;
+      baton->flags = obj->mflags;
 
       int status = uv_queue_work(uv_default_loop(), &baton->request,
                                  Magic::DetectWork, Magic::DetectAfter);
@@ -176,7 +171,8 @@ class Magic : public ObjectWrap {
       baton->data = Buffer::Data(buffer_obj);
       baton->dataLen = Buffer::Length(buffer_obj);
       baton->dataIsPath = false;
-      baton->magic = obj->magic;
+      baton->path = obj->mpath;
+      baton->flags = obj->mflags;
 
       int status = uv_queue_work(uv_default_loop(), &baton->request,
                                  Magic::DetectWork, Magic::DetectAfter);
@@ -187,18 +183,28 @@ class Magic : public ObjectWrap {
 
     static void DetectWork(uv_work_t* req) {
       Baton* baton = static_cast<Baton*>(req->data);
+      const char* result;
+
+      struct magic_set* magic = init_magic(baton->path, baton->flags,
+                                           baton->error_message);
+      if (magic == NULL) {
+        if (baton->error_message)
+          baton->error = true;
+        return;
+      }
 
       if (baton->dataIsPath)
-        baton->result = magic_file(baton->magic, baton->data);
-      else {
-        baton->result = magic_buffer(baton->magic, (const void*)baton->data,
-                                     baton->dataLen);
-      }
+        result = magic_file(magic, baton->data);
+      else
+        result = magic_buffer(magic, (const void*)baton->data, baton->dataLen);
 
-      if (baton->result == NULL) {
+      if (result == NULL) {
         baton->error = true;
-        baton->error_message = magic_error(baton->magic);
-      }
+        baton->error_message = strdup(magic_error(magic));
+      } else
+        baton->result = strdup(result);
+
+      magic_close(magic);
     }
 
     static void DetectAfter(uv_work_t* req) {
@@ -207,6 +213,7 @@ class Magic : public ObjectWrap {
 
       if (baton->error) {
         Local<Value> err = Exception::Error(String::New(baton->error_message));
+        free(baton->error_message);
 
         const unsigned argc = 1;
         Local<Value> argv[argc] = { err };
@@ -214,7 +221,7 @@ class Magic : public ObjectWrap {
         TryCatch try_catch;
         baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
         if (try_catch.HasCaught())
-          node::FatalException(try_catch);
+          FatalException(try_catch);
       } else {
         const unsigned argc = 2;
         Local<Value> argv[argc] = {
@@ -222,10 +229,12 @@ class Magic : public ObjectWrap {
           Local<Value>::New(String::New(baton->result))
         };
 
+        free((void*)baton->result);
+
         TryCatch try_catch;
         baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
         if (try_catch.HasCaught())
-          node::FatalException(try_catch);
+          FatalException(try_catch);
       }
 
       if (baton->dataIsPath)
@@ -237,12 +246,15 @@ class Magic : public ObjectWrap {
     static Handle<Value> SetFallback(const Arguments& args) {
       HandleScope scope;
 
-      if (!fallbackPath.IsEmpty()) {
-        fallbackPath.Dispose();
-        fallbackPath.Clear();
-      }
+      if (fallbackPath)
+        free((void*)fallbackPath);
 
-      fallbackPath = Persistent<String>::New(args[0]->ToString());
+      if (args.Length() > 0 && args[0]->IsString()
+          && args[0]->ToString()->Length() > 0) {
+        String::Utf8Value str(args[0]->ToString());
+        fallbackPath = strdup((const char*)(*str));
+      } else
+        fallbackPath = NULL;
 
       return Undefined();
     }
