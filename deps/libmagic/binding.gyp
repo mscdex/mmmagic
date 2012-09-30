@@ -6,7 +6,6 @@
       'include_dirs': [ '.', 'src', 'pcre' ],
       'dependencies': [
         'pcre/binding.gyp:pcre',
-        'zlib/zlib.gyp:zlib',
       ],
       'defines': [ 'HAVE_CONFIG_H', 'HAVE_ZLIB_H', 'HAVE_LIBZ' ],
       'conditions': [
@@ -41,7 +40,12 @@
           ],
         }],
       ],
-      'cflags': [ '-O3' ],
+      'cflags!': [ '-O2' ],
+      'cflags+': [ '-O3' ],
+      'cflags_cc!': [ '-O2' ],
+      'cflags_cc+': [ '-O3' ],
+      'cflags_c!': [ '-O2' ],
+      'cflags_c+': [ '-O3' ],
       'sources': [
         'src/magic.c',
         'src/apprentice.c',

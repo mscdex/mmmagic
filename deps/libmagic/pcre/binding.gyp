@@ -45,10 +45,16 @@
         'pcreposix.h',
         'ucp.h',
         'pcre_chartables.c', 
-        # C plusplus sourcews
+        # C plusplus sources
         'pcrecpp.cc',
         'pcre_scanner.cc',
       ],
+      'cflags!': [ '-O2' ],
+      'cflags+': [ '-O3' ],
+      'cflags_cc!': [ '-O2' ],
+      'cflags_cc+': [ '-O3' ],
+      'cflags_c!': [ '-O2' ],
+      'cflags_c+': [ '-O3' ],
       'msvs_settings': {
         'VCCLCompilerTool': {
           'AdditionalOptions': ['/wd4018', '/wd4996'],
