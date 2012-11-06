@@ -79,7 +79,7 @@ API
 Magic methods
 -------------
 
-* **(constructor)**([<_String_>magicPath][, <_Integer_>flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use. If magicPath is not a string and not false, the bundled magic file will be used. If magicPath is false, mmmagic will default to searching for a magic file to use (order of magic file searching: `MAGIC` env var -> various file system paths (see `man file`)). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
+* **(constructor)**([< _String_ >magicPath][, < _Integer_ >flags]) - Creates and returns a new Magic instance. magicPath is an optional path string that points to a particular magic file to use. If magicPath is not a string and not false, the bundled magic file will be used. If magicPath is false, mmmagic will default to searching for a magic file to use (order of magic file searching: `MAGIC` env var -> various file system paths (see `man file`)). flags is a bitmask with the following valid values (available as constants on require('mmmagic')):
 
     * **MAGIC\_NONE** - No flags set
     * **MAGIC\_DEBUG** - Turn on debugging
@@ -102,6 +102,6 @@ Magic methods
     * **MAGIC\_NO\_CHECK\_TOKENS** - Don't check tokens
     * **MAGIC\_NO\_CHECK\_ENCODING** - Don't check text encodings
 
-* **detectFile**(<_String_>path, <_Function_>callback) - _(void)_ - Inspects the file pointed at by path. The callback receives two arguments: an <_Error_> object in case of error (null otherwise), and a <_String_> containing the result of the inspection.
+* **detectFile**(< _String_ >path, < _Function_ >callback) - _(void)_ - Inspects the file pointed at by path. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and a < _String_ > containing the result of the inspection.
 
-* **detect**(<_Buffer_>data, <_Function_>callback) - _(void)_ - Inspects the contents of data. The callback receives two arguments: an <_Error_> object in case of error (null otherwise), and a <_String_> containing the result of the inspection.
+* **detect**(< _Buffer_ >data, < _Function_ >callback) - _(void)_ - Inspects the contents of data. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and a < _String_ > containing the result of the inspection.
