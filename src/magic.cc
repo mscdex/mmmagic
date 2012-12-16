@@ -127,8 +127,10 @@ class Magic : public ObjectWrap {
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
 
-      int status = uv_queue_work(uv_default_loop(), &baton->request,
-                                 Magic::DetectWork, Magic::DetectAfter);
+      int status = uv_queue_work(uv_default_loop(),
+                                 &baton->request,
+                                 Magic::DetectWork,
+                                 (uv_after_work_cb)Magic::DetectAfter);
       assert(status == 0);
 
       return Undefined();
@@ -165,8 +167,10 @@ class Magic : public ObjectWrap {
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
 
-      int status = uv_queue_work(uv_default_loop(), &baton->request,
-                                 Magic::DetectWork, Magic::DetectAfter);
+      int status = uv_queue_work(uv_default_loop(),
+                                 &baton->request,
+                                 Magic::DetectWork,
+                                 (uv_after_work_cb)Magic::DetectAfter);
       assert(status == 0);
 
       return Undefined();
