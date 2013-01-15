@@ -7,7 +7,7 @@
       'dependencies': [
         'pcre/binding.gyp:pcre',
       ],
-      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.12"' ],
+      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.12.1"' ],
       'conditions': [
         [ 'OS=="win"', {
           'sources': [
@@ -20,9 +20,6 @@
             'src/vasprintf.c',
           ],
           'include_dirs': [ 'msvc', 'config/win' ],
-          #'defines': [
-          #  'WIN32', '_WIN32', '_USE_32BIT_TIME_T'
-          #],
           'libraries': [
             'shlwapi.lib'
           ],
