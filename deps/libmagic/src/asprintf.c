@@ -1,103 +1,45 @@
 /*
- * Copyright (c) 2004 Darren Tucker.
- *
- * Based originally on asprintf.c from OpenBSD:
- * Copyright (c) 1997 Todd C. Miller <Todd.Miller AT courtesan.com>
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ * Copyright (c) Ian F. Darwin 1986-1995.
+ * Software written by Ian F. Darwin and others;
+ * maintained 1995-present by Christos Zoulas and others.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice immediately at the beginning of the file, without modification,
+ *    this list of conditions, and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
-extern int vsnprintf();
+#include "file.h"
 
-/* Include vasprintf() if not on your OS. */
-#ifndef HAVE_VASPRINTF
-
-#include <errno.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdlib.h>
-
-#ifndef VA_COPY
-# ifdef HAVE_VA_COPY
-#  define VA_COPY(dest, src) va_copy(dest, src)
-# else
-#  ifdef HAVE___VA_COPY
-#   define VA_COPY(dest, src) __va_copy(dest, src)
-#  else
-#   define VA_COPY(dest, src) (dest) = (src)
-#  endif
-# endif
+#ifndef lint
+FILE_RCSID("@(#)$File: asprintf.c,v 1.3 2009/02/03 20:27:51 christos Exp $")
 #endif
 
-#define INIT_SZ 128
-
-int
-vasprintf(char **str, const char *fmt, va_list ap)
+int asprintf(char **ptr, const char *fmt, ...)
 {
-        int ret = -1;
-        va_list ap2;
-        char *string, *newstr;
-        size_t len;
+  va_list vargs;
+  int retval;
 
-        VA_COPY(ap2, ap);
-        if ((string = malloc(INIT_SZ)) == NULL)
-                goto fail;
+  va_start(vargs, fmt);
+  retval = vasprintf(ptr, fmt, vargs);
+  va_end(vargs);
 
-        ret = vsnprintf(string, INIT_SZ, fmt, ap2);
-        if (ret >= 0 && ret < INIT_SZ) { /* succeeded with initial alloc */
-                *str = string;
-        } else if (ret == INT_MAX || ret < 0) { /* Bad length */
-                goto fail;
-        } else {        /* bigger than initial, realloc allowing for nul */
-                len = (size_t)ret + 1;
-                if ((newstr = realloc(string, len)) == NULL) {
-                        free(string);
-                        goto fail;
-                } else {
-                        va_end(ap2);
-                        VA_COPY(ap2, ap);
-                        ret = vsnprintf(newstr, len, fmt, ap2);
-                        if (ret >= 0 && (size_t)ret < len) {
-                                *str = newstr;
-                        } else { /* failed with realloc'ed string, give up */
-                                free(newstr);
-                                goto fail;
-                        }
-                }
-        }
-        va_end(ap2);
-        return (ret);
-
-fail:
-        *str = NULL;
-        errno = ENOMEM;
-        va_end(ap2);
-        return (-1);
+  return retval;
 }
-#endif
-
-/* Include asprintf() if not on your OS. */
-#ifndef HAVE_ASPRINTF
-int asprintf(char **str, const char *fmt, ...)
-{
-        va_list ap;
-        int ret;
-        
-        *str = NULL;
-        va_start(ap, fmt);
-        ret = vasprintf(str, fmt, ap);
-        va_end(ap);
-
-        return ret;
-}
-#endif

@@ -321,3 +321,5 @@ typedef long int64_t;
 #endif
 #endif
 
+#define HAVE_CTIME_R 1
+#define HAVE_ASCTIME_R 1

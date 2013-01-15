@@ -301,7 +301,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 protected int
 file_reset(struct magic_set *ms)
 {
-	if (ms->mlist == NULL) {
+	if (ms->mlist[0] == NULL) {
 		file_error(ms, 0, "no magic files loaded");
 		return -1;
 	}

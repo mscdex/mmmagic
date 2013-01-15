@@ -15,11 +15,14 @@
             'src/strlcat.c',
             'src/strlcpy.c',
             'src/getline.c',
+            'src/asctime_r.c',
+            'src/ctime_r.c',
+            'src/vasprintf.c',
           ],
           'include_dirs': [ 'msvc', 'config/win' ],
-          'defines': [
-            'WIN32', '_WIN32', '_USE_32BIT_TIME_T'
-          ],
+          #'defines': [
+          #  'WIN32', '_WIN32', '_USE_32BIT_TIME_T'
+          #],
           'libraries': [
             'shlwapi.lib'
           ],

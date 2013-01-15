@@ -27,7 +27,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: readelf.c,v 1.90 2011/08/23 08:01:12 christos Exp $")
+FILE_RCSID("@(#)$File: readelf.c,v 1.93 2012/10/31 17:03:41 christos Exp $")
 #endif
 
 #ifdef BUILTIN_ELF
@@ -58,7 +58,9 @@ private size_t donote(struct magic_set *, void *, size_t, size_t, int,
 
 private uint16_t getu16(int, uint16_t);
 private uint32_t getu32(int, uint32_t);
+#ifndef USE_ARRAY_FOR_64BIT_TYPES
 private uint64_t getu64(int, uint64_t);
+#endif
 
 private uint16_t
 getu16(int swap, uint16_t value)
@@ -100,6 +102,7 @@ getu32(int swap, uint32_t value)
 		return value;
 }
 
+#ifndef USE_ARRAY_FOR_64BIT_TYPES
 private uint64_t
 getu64(int swap, uint64_t value)
 {
@@ -124,6 +127,7 @@ getu64(int swap, uint64_t value)
 	} else
 		return value;
 }
+#endif
 
 #define elf_getu16(swap, value) getu16(swap, value)
 #define elf_getu32(swap, value) getu32(swap, value)
@@ -416,6 +420,10 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 	    (FLAGS_DID_NOTE|FLAGS_DID_BUILD_ID))
 		goto core;
 
+	if (namesz == 5 && strcmp((char *)&nbuf[noff], "SuSE") == 0 &&
+	    xnh_type == NT_GNU_VERSION && descsz == 2) {
+	    file_printf(ms, ", for SuSE %d.%d", nbuf[doff], nbuf[doff + 1]);
+	}
 	if (namesz == 4 && strcmp((char *)&nbuf[noff], "GNU") == 0 &&
 	    xnh_type == NT_GNU_VERSION && descsz == 16) {
 		uint32_t desc[4];
@@ -457,13 +465,14 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 
 	if (namesz == 4 && strcmp((char *)&nbuf[noff], "GNU") == 0 &&
 	    xnh_type == NT_GNU_BUILD_ID && (descsz == 16 || descsz == 20)) {
-	    uint32_t desc[5], i;
-	    if (file_printf(ms, ", BuildID[%s]=0x", descsz == 16 ? "md5/uuid" :
+	    uint8_t desc[20];
+	    uint32_t i;
+	    if (file_printf(ms, ", BuildID[%s]=", descsz == 16 ? "md5/uuid" :
 		"sha1") == -1)
 		    return size;
 	    (void)memcpy(desc, &nbuf[doff], descsz);
-	    for (i = 0; i < descsz >> 2; i++)
-		if (file_printf(ms, "%.8x", desc[i]) == -1)
+	    for (i = 0; i < descsz; i++)
+		if (file_printf(ms, "%02x", desc[i]) == -1)
 		    return size;
 	    *flags |= FLAGS_DID_BUILD_ID;
 	}
@@ -919,6 +928,17 @@ doshn(struct magic_set *ms, int clazz, int swap, int fd, off_t off, int num,
 			free(nbuf);
 			break;
 		case SHT_SUNW_cap:
+			switch (mach) {
+			case EM_SPARC:
+			case EM_SPARCV9:
+			case EM_IA_64:
+			case EM_386:
+			case EM_AMD64:
+				break;
+			default:
+				goto skip;
+			}
+
 			if (lseek(fd, (off_t)xsh_offset, SEEK_SET) ==
 			    (off_t)-1) {
 				file_badseek(ms);
@@ -958,12 +978,13 @@ doshn(struct magic_set *ms, int clazz, int swap, int fd, off_t off, int num,
 					break;
 				}
 			}
-			break;
-
+			/*FALLTHROUGH*/
+		skip:
 		default:
 			break;
 		}
 	}
+
 	if (file_printf(ms, ", %sstripped", stripped ? "" : "not ") == -1)
 		return -1;
 	if (cap_hw1) {
@@ -1042,8 +1063,7 @@ dophn_exec(struct magic_set *ms, int clazz, int swap, int fd, off_t off,
 	const char *shared_libraries = "";
 	unsigned char nbuf[BUFSIZ];
 	ssize_t bufsize;
-	size_t offset;
-  size_t align;
+	size_t offset, align;
 	
 	if (size != xph_sizeof) {
 		if (file_printf(ms, ", corrupted program header size") == -1)
