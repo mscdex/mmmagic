@@ -154,7 +154,11 @@ class Magic : public ObjectWrap {
       }
 
       Local<Function> callback = Local<Function>::Cast(args[1]);
+#if NODE_MAJOR_VERSION == 0 && NODE_MINOR_VERSION < 10
       Local<Object> buffer_obj = args[0]->ToObject();
+#else
+      Local<Value> buffer_obj = args[0];
+#endif
 
       Baton* baton = new Baton();
       baton->error = false;
