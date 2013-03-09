@@ -1,6 +1,323 @@
 ChangeLog for PCRE
 ------------------
 
+Version 8.32 30-November-2012
+-----------------------------
+
+1.  Improved JIT compiler optimizations for first character search and single
+    character iterators.
+
+2.  Supporting IBM XL C compilers for PPC architectures in the JIT compiler.
+    Patch by Daniel Richard G.
+
+3.  Single character iterator optimizations in the JIT compiler.
+
+4.  Improved JIT compiler optimizations for character ranges.
+
+5.  Rename the "leave" variable names to "quit" to improve WinCE compatibility.
+    Reported by Giuseppe D'Angelo.
+
+6.  The PCRE_STARTLINE bit, indicating that a match can occur only at the start
+    of a line, was being set incorrectly in cases where .* appeared inside
+    atomic brackets at the start of a pattern, or where there was a subsequent
+    *PRUNE or *SKIP.
+
+7.  Improved instruction cache flush for POWER/PowerPC.
+    Patch by Daniel Richard G.
+
+8.  Fixed a number of issues in pcregrep, making it more compatible with GNU
+    grep:
+
+    (a) There is now no limit to the number of patterns to be matched.
+
+    (b) An error is given if a pattern is too long.
+
+    (c) Multiple uses of --exclude, --exclude-dir, --include, and --include-dir
+        are now supported.
+
+    (d) --exclude-from and --include-from (multiple use) have been added.
+
+    (e) Exclusions and inclusions now apply to all files and directories, not
+        just to those obtained from scanning a directory recursively.
+
+    (f) Multiple uses of -f and --file-list are now supported.
+
+    (g) In a Windows environment, the default for -d has been changed from
+        "read" (the GNU grep default) to "skip", because otherwise the presence
+        of a directory in the file list provokes an error.
+
+    (h) The documentation has been revised and clarified in places.
+
+9.  Improve the matching speed of capturing brackets.
+
+10. Changed the meaning of \X so that it now matches a Unicode extended
+    grapheme cluster.
+
+11. Patch by Daniel Richard G to the autoconf files to add a macro for sorting
+    out POSIX threads when JIT support is configured.
+
+12. Added support for PCRE_STUDY_EXTRA_NEEDED.
+
+13. In the POSIX wrapper regcomp() function, setting re_nsub field in the preg
+    structure could go wrong in environments where size_t is not the same size
+    as int.
+
+14. Applied user-supplied patch to pcrecpp.cc to allow PCRE_NO_UTF8_CHECK to be
+    set.
+
+15. The EBCDIC support had decayed; later updates to the code had included
+    explicit references to (e.g.) \x0a instead of CHAR_LF. There has been a
+    general tidy up of EBCDIC-related issues, and the documentation was also
+    not quite right. There is now a test that can be run on ASCII systems to
+    check some of the EBCDIC-related things (but is it not a full test).
+
+16. The new PCRE_STUDY_EXTRA_NEEDED option is now used by pcregrep, resulting
+    in a small tidy to the code.
+
+17. Fix JIT tests when UTF is disabled and both 8 and 16 bit mode are enabled.
+
+18. If the --only-matching (-o) option in pcregrep is specified multiple
+    times, each one causes appropriate output. For example, -o1 -o2 outputs the
+    substrings matched by the 1st and 2nd capturing parentheses. A separating
+    string can be specified by --om-separator (default empty).
+
+19. Improving the first n character searches.
+
+20. Turn case lists for horizontal and vertical white space into macros so that
+    they are defined only once.
+
+21. This set of changes together give more compatible Unicode case-folding
+    behaviour for characters that have more than one other case when UCP
+    support is available.
+
+    (a) The Unicode property table now has offsets into a new table of sets of
+        three or more characters that are case-equivalent. The MultiStage2.py
+        script that generates these tables (the pcre_ucd.c file) now scans
+        CaseFolding.txt instead of UnicodeData.txt for character case
+        information.
+
+    (b) The code for adding characters or ranges of characters to a character
+        class has been abstracted into a generalized function that also handles
+        case-independence. In UTF-mode with UCP support, this uses the new data
+        to handle characters with more than one other case.
+
+    (c) A bug that is fixed as a result of (b) is that codepoints less than 256
+        whose other case is greater than 256 are now correctly matched
+        caselessly. Previously, the high codepoint matched the low one, but not
+        vice versa.
+
+    (d) The processing of \h, \H, \v, and \ in character classes now makes use
+        of the new class addition function, using character lists defined as
+        macros alongside the case definitions of 20 above.
+
+    (e) Caseless back references now work with characters that have more than
+        one other case.
+
+    (f) General caseless matching of characters with more than one other case
+        is supported.
+
+22. Unicode character properties were updated from Unicode 6.2.0
+
+23. Improved CMake support under Windows. Patch by Daniel Richard G.
+
+24. Add support for 32-bit character strings, and UTF-32
+
+25. Major JIT compiler update (code refactoring and bugfixing).
+    Experimental Sparc 32 support is added.
+
+26. Applied a modified version of Daniel Richard G's patch to create
+    pcre.h.generic and config.h.generic by "make" instead of in the
+    PrepareRelease script.
+
+27. Added a definition for CHAR_NULL (helpful for the z/OS port), and use it in
+    pcre_compile.c when checking for a zero character.
+
+28. Introducing a native interface for JIT. Through this interface, the compiled
+    machine code can be directly executed. The purpose of this interface is to
+    provide fast pattern matching, so several sanity checks are not performed.
+    However, feature tests are still performed. The new interface provides
+    1.4x speedup compared to the old one.
+
+29. If pcre_exec() or pcre_dfa_exec() was called with a negative value for
+    the subject string length, the error given was PCRE_ERROR_BADOFFSET, which
+    was confusing. There is now a new error PCRE_ERROR_BADLENGTH for this case.
+
+30. In 8-bit UTF-8 mode, pcretest failed to give an error for data codepoints
+    greater than 0x7fffffff (which cannot be represented in UTF-8, even under
+    the "old" RFC 2279). Instead, it ended up passing a negative length to
+    pcre_exec().
+
+31. Add support for GCC's visibility feature to hide internal functions.
+
+32. Running "pcretest -C pcre8" or "pcretest -C pcre16" gave a spurious error
+    "unknown -C option" after outputting 0 or 1.
+
+33. There is now support for generating a code coverage report for the test
+    suite in environments where gcc is the compiler and lcov is installed. This
+    is mainly for the benefit of the developers.
+
+34. If PCRE is built with --enable-valgrind, certain memory regions are marked
+    unaddressable using valgrind annotations, allowing valgrind to detect
+    invalid memory accesses. This is mainly for the benefit of the developers.
+
+25. (*UTF) can now be used to start a pattern in any of the three libraries.
+
+26. Give configure error if --enable-cpp but no C++ compiler found.
+
+
+Version 8.31 06-July-2012
+-------------------------
+
+1.  Fixing a wrong JIT test case and some compiler warnings.
+
+2.  Removed a bashism from the RunTest script.
+
+3.  Add a cast to pcre_exec.c to fix the warning "unary minus operator applied
+    to unsigned type, result still unsigned" that was given by an MS compiler
+    on encountering the code "-sizeof(xxx)".
+
+4.  Partial matching support is added to the JIT compiler.
+
+5.  Fixed several bugs concerned with partial matching of items that consist
+    of more than one character:
+
+    (a) /^(..)\1/ did not partially match "aba" because checking references was
+        done on an "all or nothing" basis. This also applied to repeated
+        references.
+
+    (b) \R did not give a hard partial match if \r was found at the end of the
+        subject.
+
+    (c) \X did not give a hard partial match after matching one or more
+        characters at the end of the subject.
+
+    (d) When newline was set to CRLF, a pattern such as /a$/ did not recognize
+        a partial match for the string "\r".
+
+    (e) When newline was set to CRLF, the metacharacter "." did not recognize
+        a partial match for a CR character at the end of the subject string.
+
+6.  If JIT is requested using /S++ or -s++ (instead of just /S+ or -s+) when
+    running pcretest, the text "(JIT)" added to the output whenever JIT is
+    actually used to run the match.
+
+7.  Individual JIT compile options can be set in pcretest by following -s+[+]
+    or /S+[+] with a digit between 1 and 7.
+
+8.  OP_NOT now supports any UTF character not just single-byte ones.
+
+9.  (*MARK) control verb is now supported by the JIT compiler.
+
+10. The command "./RunTest list" lists the available tests without actually
+    running any of them. (Because I keep forgetting what they all are.)
+
+11. Add PCRE_INFO_MAXLOOKBEHIND.
+
+12. Applied a (slightly modified) user-supplied patch that improves performance
+    when the heap is used for recursion (compiled with --disable-stack-for-
+    recursion). Instead of malloc and free for each heap frame each time a
+    logical recursion happens, frames are retained on a chain and re-used where
+    possible. This sometimes gives as much as 30% improvement.
+
+13. As documented, (*COMMIT) is now confined to within a recursive subpattern
+    call.
+
+14. As documented, (*COMMIT) is now confined to within a positive assertion.
+
+15. It is now possible to link pcretest with libedit as an alternative to
+    libreadline.
+
+16. (*COMMIT) control verb is now supported by the JIT compiler.
+
+17. The Unicode data tables have been updated to Unicode 6.1.0.
+
+18. Added --file-list option to pcregrep.
+
+19. Added binary file support to pcregrep, including the -a, --binary-files,
+    -I, and --text options.
+
+20. The madvise function is renamed for posix_madvise for QNX compatibility
+    reasons. Fixed by Giuseppe D'Angelo.
+
+21. Fixed a bug for backward assertions with REVERSE 0 in the JIT compiler.
+
+22. Changed the option for creating symbolic links for 16-bit man pages from
+    -s to -sf so that re-installing does not cause issues.
+
+23. Support PCRE_NO_START_OPTIMIZE in JIT as (*MARK) support requires it.
+
+24. Fixed a very old bug in pcretest that caused errors with restarted DFA
+    matches in certain environments (the workspace was not being correctly
+    retained). Also added to pcre_dfa_exec() a simple plausibility check on
+    some of the workspace data at the beginning of a restart.
+
+25. \s*\R was auto-possessifying the \s* when it should not, whereas \S*\R
+    was not doing so when it should - probably a typo introduced by SVN 528
+    (change 8.10/14).
+
+26. When PCRE_UCP was not set, \w+\x{c4} was incorrectly auto-possessifying the
+    \w+ when the character tables indicated that \x{c4} was a word character.
+    There were several related cases, all because the tests for doing a table
+    lookup were testing for characters less than 127 instead of 255.
+
+27. If a pattern contains capturing parentheses that are not used in a match,
+    their slots in the ovector are set to -1. For those that are higher than
+    any matched groups, this happens at the end of processing. In the case when
+    there were back references that the ovector was too small to contain
+    (causing temporary malloc'd memory to be used during matching), and the
+    highest capturing number was not used, memory off the end of the ovector
+    was incorrectly being set to -1. (It was using the size of the temporary
+    memory instead of the true size.)
+
+28. To catch bugs like 27 using valgrind, when pcretest is asked to specify an
+    ovector size, it uses memory at the end of the block that it has got.
+
+29. Check for an overlong MARK name and give an error at compile time. The
+    limit is 255 for the 8-bit library and 65535 for the 16-bit library.
+
+30. JIT compiler update.
+
+31. JIT is now supported on jailbroken iOS devices. Thanks for Ruiger
+    Rill for the patch.
+
+32. Put spaces around SLJIT_PRINT_D in the JIT compiler. Required by CXX11.
+
+33. Variable renamings in the PCRE-JIT compiler. No functionality change.
+
+34. Fixed typos in pcregrep: in two places there was SUPPORT_LIBZ2 instead of
+    SUPPORT_LIBBZ2. This caused a build problem when bzip2 but not gzip (zlib)
+    was enabled.
+
+35. Improve JIT code generation for greedy plus quantifier.
+
+36. When /((?:a?)*)*c/ or /((?>a?)*)*c/ was matched against "aac", it set group
+    1 to "aa" instead of to an empty string. The bug affected repeated groups
+    that could potentially match an empty string.
+
+37. Optimizing single character iterators in JIT.
+
+38. Wide characters specified with \uxxxx in JavaScript mode are now subject to
+    the same checks as \x{...} characters in non-JavaScript mode. Specifically,
+    codepoints that are too big for the mode are faulted, and in a UTF mode,
+    disallowed codepoints are also faulted.
+
+39. If PCRE was compiled with UTF support, in three places in the DFA
+    matcher there was code that should only have been obeyed in UTF mode, but
+    was being obeyed unconditionally. In 8-bit mode this could cause incorrect
+    processing when bytes with values greater than 127 were present. In 16-bit
+    mode the bug would be provoked by values in the range 0xfc00 to 0xdc00. In
+    both cases the values are those that cannot be the first data item in a UTF
+    character. The three items that might have provoked this were recursions,
+    possessively repeated groups, and atomic groups.
+
+40. Ensure that libpcre is explicitly listed in the link commands for pcretest
+    and pcregrep, because some OS require shared objects to be explicitly
+    passed to ld, causing the link step to fail if they are not.
+
+41. There were two incorrect #ifdefs in pcre_study.c, meaning that, in 16-bit
+    mode, patterns that started with \h* or \R* might be incorrectly matched.
+
+
 Version 8.30 04-February-2012
 -----------------------------
 

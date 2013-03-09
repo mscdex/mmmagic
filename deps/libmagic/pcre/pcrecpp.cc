@@ -521,7 +521,10 @@ int RE::TryMatch(const StringPiece& text,
     extra.match_limit_recursion = options_.match_limit_recursion();
   }
 
-  int options = 0;
+  // int options = 0;
+  // Changed by PH as a result of bugzilla #1288
+  int options = (options_.all_options() & PCRE_NO_UTF8_CHECK);
+
   if (anchor != UNANCHORED)
     options |= PCRE_ANCHORED;
   if (!empty_ok)
