@@ -27,7 +27,7 @@
  */
 /*
  * file.h - definitions for file(1) program
- * @(#)$File: file.h,v 1.141 2013/01/07 02:11:22 christos Exp $
+ * @(#)$File: file.h,v 1.143 2013/01/25 23:07:19 christos Exp $
  */
 
 #ifndef __file_h__
@@ -161,12 +161,13 @@ typedef unsigned int mode_t;
 #endif
 #define MAXMAGIS 8192		/* max entries in any one magic file
 				   or directory */
-#define MAXDESC	64		/* max leng of text description/MIME type */
-#define MAXstring 64		/* max leng of "string" types */
+#define MAXDESC	64		/* max len of text description/MIME type */
+#define MAXMIME	80		/* max len of text MIME type */
+#define MAXstring 64		/* max len of "string" types */
 
 #define MAGICNO		0xF11E041C
-#define VERSIONNO	9
-#define FILE_MAGICSIZE	232
+#define VERSIONNO	10
+#define FILE_MAGICSIZE	248
 
 #define	FILE_LOAD	0
 #define FILE_CHECK	1
@@ -333,9 +334,9 @@ struct magic {
 	union VALUETYPE value;	/* either number or string */
 	/* Words 17-32 */
 	char desc[MAXDESC];	/* description */
-	/* Words 33-48 */
-	char mimetype[MAXDESC]; /* MIME type */
-	/* Words 49-50 */
+	/* Words 33-52 */
+	char mimetype[MAXMIME]; /* MIME type */
+	/* Words 53-54 */
 	char apple[8];
 };
 
@@ -516,6 +517,9 @@ extern char *sys_errlist[];
 #define strtoul(a, b, c)	strtol(a, b, c)
 #endif
 
+#ifndef HAVE_PREAD
+ssize_t pread(int, void *, size_t, off_t);
+#endif
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **, const char *, va_list);
 #endif

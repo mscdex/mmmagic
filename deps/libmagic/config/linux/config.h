@@ -320,3 +320,4 @@ typedef long int64_t;
 
 #define HAVE_CTIME_R 1
 #define HAVE_ASCTIME_R 1
+#define HAVE_PREAD 1

@@ -15,7 +15,7 @@
       'cflags_c!': [ '-O2' ],
       'cflags_c+': [ '-O3' ],
       'dependencies': [
-        'deps/libmagic/binding.gyp:libmagic',
+        'deps/libmagic/libmagic.gyp:libmagic',
       ],
     },
   ],
