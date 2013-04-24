@@ -133,14 +133,19 @@ file. */
 
 /* The functions */
 
-PCREPOSIX_EXP_DECL int regcomp(regex_t *, const char *, int);
-PCREPOSIX_EXP_DECL int regexec(const regex_t *, const char *, size_t,
+PCREPOSIX_EXP_DECL int pcreposix_regcomp(regex_t *, const char *, int);
+PCREPOSIX_EXP_DECL int pcreposix_regexec(const regex_t *, const char *, size_t,
                      regmatch_t *, int);
-PCREPOSIX_EXP_DECL size_t regerror(int, const regex_t *, char *, size_t);
-PCREPOSIX_EXP_DECL void regfree(regex_t *);
+PCREPOSIX_EXP_DECL size_t pcreposix_regerror(int, const regex_t *, char *, size_t);
+PCREPOSIX_EXP_DECL void pcreposix_regfree(regex_t *);
 
 #ifdef __cplusplus
 }   /* extern "C" */
 #endif
+
+#define regcomp pcreposix_regcomp
+#define regexec pcreposix_regexec
+#define regerror pcreposix_regerror
+#define regfree pcreposix_regfree
 
 #endif /* End of pcreposix.h */
