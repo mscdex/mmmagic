@@ -38,9 +38,6 @@
         'pcre_version.c',
         'pcre_xclass.c',
         'pcreposix.c',
-        # C plusplus sources
-        'pcrecpp.cc',
-        'pcre_scanner.cc',
       ],
       'cflags!': [ '-O2' ],
       'cflags+': [ '-O3' ],
