@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: apprentice.c,v 1.189 2013/01/11 16:45:23 christos Exp $")
+FILE_RCSID("@(#)$File: apprentice.c,v 1.190 2013/02/17 22:29:40 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -2080,6 +2080,7 @@ check_format_type(const char *ptr, int type)
 			case 'i':
 			case 'd':
 			case 'u':
+			case 'o':
 			case 'x':
 			case 'X':
 				return 0;
@@ -2094,6 +2095,7 @@ check_format_type(const char *ptr, int type)
 				case 'i':
 				case 'd':
 				case 'u':
+				case 'o':
 				case 'x':
 				case 'X':
 					return 0;
@@ -2110,6 +2112,7 @@ check_format_type(const char *ptr, int type)
 		case 'c':
 		case 'd':
 		case 'u':
+		case 'o':
 		case 'x':
 		case 'X':
 			return 0;

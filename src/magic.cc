@@ -67,6 +67,15 @@ class Magic : public ObjectWrap {
         );
       }
 
+      if (args.Length() > 1) {
+        if (args[1]->IsInt32())
+          mflags = args[1]->Int32Value();
+        else {
+          return ThrowException(Exception::TypeError(
+              String::New("Second argument must be an integer")));
+        }
+      }
+
       if (args.Length() > 0) {
         if (args[0]->IsString()) {
           use_bundled = false;
@@ -80,16 +89,6 @@ class Magic : public ObjectWrap {
         } else {
           return ThrowException(Exception::TypeError(
               String::New("First argument must be a string or integer")));
-        }
-      }
-      if (args.Length() > 1) {
-        if (args[1]->IsInt32())
-          mflags = args[1]->Int32Value();
-        else {
-          if (path)
-            free(path);
-          return ThrowException(Exception::TypeError(
-              String::New("Second argument must be an integer")));
         }
       }
 
