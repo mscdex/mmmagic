@@ -125,6 +125,7 @@ class Magic : public ObjectWrap {
       baton->dataIsPath = true;
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
+      baton->result = NULL;
 
       int status = uv_queue_work(uv_default_loop(),
                                  &baton->request,
@@ -169,6 +170,7 @@ class Magic : public ObjectWrap {
       baton->dataIsPath = false;
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
+      baton->result = NULL;
 
       int status = uv_queue_work(uv_default_loop(),
                                  &baton->request,
@@ -191,6 +193,7 @@ class Magic : public ObjectWrap {
                  && magic_load(magic, fallbackPath) == -1) {
         baton->error_message = strdup(magic_error(magic));
         magic_close(magic);
+        magic = NULL;
       }
 
       if (magic == NULL) {
@@ -205,8 +208,11 @@ class Magic : public ObjectWrap {
         result = magic_buffer(magic, (const void*)baton->data, baton->dataLen);
 
       if (result == NULL) {
-        baton->error = true;
-        baton->error_message = strdup(magic_error(magic));
+        const char* error = magic_error(magic);
+        if (error) {
+          baton->error = true;
+          baton->error_message = strdup(error);
+        }
       } else
         baton->result = strdup(result);
 
@@ -232,10 +238,13 @@ class Magic : public ObjectWrap {
         const unsigned argc = 2;
         Local<Value> argv[argc] = {
           Local<Value>::New(Null()),
-          Local<Value>::New(String::New(baton->result))
+          Local<Value>::New(baton->result
+                            ? String::New(baton->result)
+                            : String::Empty())
         };
 
-        free((void*)baton->result);
+        if (baton->result)
+          free((void*)baton->result);
 
         TryCatch try_catch;
         baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
