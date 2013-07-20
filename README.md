@@ -14,7 +14,7 @@ Requirements
 Install
 ============
 
-npm install mmmagic
+    npm install mmmagic
 
 
 Examples
