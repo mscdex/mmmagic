@@ -7,7 +7,7 @@
       'dependencies': [
         'pcre/pcre.gyp:libpcre',
       ],
-      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.13"' ],
+      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.14"' ],
       'conditions': [
         [ 'OS=="win"', {
           'sources': [
