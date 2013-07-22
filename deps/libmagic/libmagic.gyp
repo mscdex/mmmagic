@@ -38,6 +38,9 @@
         [ 'OS=="freebsd"', {
           'include_dirs': [ 'config/freebsd' ],
         }],
+        [ 'OS=="solaris"', {
+          'include_dirs': [ 'config/sunos' ],
+        }],
       ],
       'cflags!': [ '-O2' ],
       'cflags+': [ '-O3' ],
