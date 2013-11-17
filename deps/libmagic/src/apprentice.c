@@ -601,7 +601,7 @@ file_apprentice(struct magic_set *ms, const char *fn, int action)
 			mlist_free(ms->mlist[i]);
 			ms->mlist[i] = NULL;
 		}
-		file_error(ms, 0, "could not find any valid magic files!");
+		file_error(ms, 0, "could not load any valid magic files!");
 		return -1;
 	}
 
