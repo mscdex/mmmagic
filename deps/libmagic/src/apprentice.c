@@ -1130,7 +1130,7 @@ apprentice_load(struct magic_set *ms, const char *fn, int action)
 	struct dirent *d;
 
 	memset(mset, 0, sizeof(mset));
-	ms->flags |= MAGIC_CHECK;	/* Enable checks for parsed files */
+	//ms->flags |= MAGIC_CHECK;	/* Enable checks for parsed files */
 
 
 	if ((map = CAST(struct magic_map *, calloc(1, sizeof(*map)))) == NULL)
