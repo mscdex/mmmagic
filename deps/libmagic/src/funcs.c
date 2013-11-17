@@ -27,7 +27,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: funcs.c,v 1.60 2011/12/08 12:38:24 rrt Exp $")
+FILE_RCSID("@(#)$File: funcs.c,v 1.62 2013/07/21 21:06:41 rrt Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -58,6 +58,8 @@ file_vprintf(struct magic_set *ms, const char *fmt, va_list ap)
 	int len;
 	char *buf, *newstr;
 
+	if (ms->event_flags & EVENT_HAD_ERR)
+		return 0;
 	len = vasprintf(&buf, fmt, ap);
 	if (len < 0)
 		goto out;
@@ -207,7 +209,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 		if ((m = file_zmagic(ms, fd, inname, ubuf, nb)) != 0) {
 			if ((ms->flags & MAGIC_DEBUG) != 0)
 				(void)fprintf(stderr, "zmagic %d\n", m);
-			goto done;
+			goto done_encoding;
 		}
 #endif
 	/* Check if we have a tar file */
@@ -290,6 +292,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 		if (file_printf(ms, "%s", code_mime) == -1)
 			rv = -1;
 	}
+ done_encoding:
 	free(u8buf);
 	if (rv)
 		return rv;

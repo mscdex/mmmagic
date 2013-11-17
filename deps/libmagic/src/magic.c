@@ -33,7 +33,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: magic.c,v 1.77 2012/10/31 17:20:06 christos Exp $")
+FILE_RCSID("@(#)$File: magic.c,v 1.78 2013/01/07 18:20:19 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -284,7 +284,7 @@ private void
 close_and_restore(const struct magic_set *ms, const char *name, int fd,
     const struct stat *sb)
 {
-	if (fd == STDIN_FILENO)
+	if (fd == STDIN_FILENO || name == NULL)
 		return;
 	(void) close(fd);
 
@@ -345,6 +345,7 @@ file_or_fd(struct magic_set *ms, const char *inname, int fd)
 	struct stat	sb;
 	ssize_t nbytes = 0;	/* number of bytes read from a datafile */
 	int	ispipe = 0;
+	off_t	pos = (off_t)-1;
 
 	/*
 	 * one extra for terminating '\0', and
@@ -370,6 +371,8 @@ file_or_fd(struct magic_set *ms, const char *inname, int fd)
 	if (inname == NULL) {
 		if (fstat(fd, &sb) == 0 && S_ISFIFO(sb.st_mode))
 			ispipe = 1;
+		else
+			pos = lseek(fd, (off_t)0, SEEK_CUR);
 	} else {
 		int flags = O_RDONLY|O_BINARY;
 
@@ -428,6 +431,8 @@ file_or_fd(struct magic_set *ms, const char *inname, int fd)
 	rv = 0;
 done:
 	free(buf);
+	if (pos != (off_t)-1)
+		(void)lseek(fd, pos, SEEK_SET);
 	close_and_restore(ms, inname, fd, &sb);
 	return rv == 0 ? file_getbuffer(ms) : NULL;
 }

@@ -35,7 +35,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: ascmagic.c,v 1.84 2011/12/08 12:38:24 rrt Exp $")
+FILE_RCSID("@(#)$File: ascmagic.c,v 1.86 2013/06/08 14:13:12 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -72,7 +72,7 @@ file_ascmagic(struct magic_set *ms, const unsigned char *buf, size_t nbytes,
 	int text)
 {
 	unichar *ubuf = NULL;
-	size_t ulen;
+	size_t ulen = 0;
 	int rv = 1;
 
 	const char *code = NULL;
@@ -211,6 +211,7 @@ file_ascmagic_with_encoding(struct magic_set *ms, const unsigned char *buf,
 				case 0:
 					if (file_printf(ms, ", ") == -1)
 						goto done;
+					break;
 				case -1:
 					goto done;
 				default:
