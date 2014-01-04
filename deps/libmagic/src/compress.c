@@ -35,7 +35,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: compress.c,v 1.70 2012/11/07 17:54:48 christos Exp $")
+FILE_RCSID("@(#)$File: compress.c,v 1.72 2013/11/18 17:54:58 christos Exp $")
 #endif
 
 #include "magic.h"
@@ -479,7 +479,7 @@ uncompressbuf(struct magic_set *ms, int fd, size_t method,
 #endif
 			free(*newch);
 			n = 0;
-			newch[0] = '\0';
+			*newch = NULL;
 			goto err;
 		} else {
 			n = r;

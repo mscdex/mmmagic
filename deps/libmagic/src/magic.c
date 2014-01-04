@@ -33,7 +33,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: magic.c,v 1.78 2013/01/07 18:20:19 christos Exp $")
+FILE_RCSID("@(#)$File: magic.c,v 1.81 2013/11/29 15:42:51 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -375,8 +375,9 @@ file_or_fd(struct magic_set *ms, const char *inname, int fd)
 			pos = lseek(fd, (off_t)0, SEEK_CUR);
 	} else {
 		int flags = O_RDONLY|O_BINARY;
+		int okstat = stat(inname, &sb) == 0;
 
-		if (stat(inname, &sb) == 0 && S_ISFIFO(sb.st_mode)) {
+		if (okstat && S_ISFIFO(sb.st_mode)) {
 #ifdef O_NONBLOCK
 			flags |= O_NONBLOCK;
 #endif
@@ -385,7 +386,8 @@ file_or_fd(struct magic_set *ms, const char *inname, int fd)
 
 		errno = 0;
 		if ((fd = open(inname, flags)) < 0) {
-			if (unreadable_info(ms, sb.st_mode, inname) == -1)
+			if (okstat &&
+			    unreadable_info(ms, sb.st_mode, inname) == -1)
 				goto done;
 			rv = 0;
 			goto done;
