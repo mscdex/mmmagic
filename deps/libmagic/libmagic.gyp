@@ -16,6 +16,7 @@
             'src/ctime_r.c',
             'src/getline.c',
             'src/pread.c',
+            'src/strcasestr.c',
             'src/strlcat.c',
             'src/strlcpy.c',
             'src/vasprintf.c',

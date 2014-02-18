@@ -27,7 +27,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: funcs.c,v 1.64 2013/11/19 23:49:44 christos Exp $")
+FILE_RCSID("@(#)$File: funcs.c,v 1.67 2014/02/12 23:20:53 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -43,6 +43,9 @@ FILE_RCSID("@(#)$File: funcs.c,v 1.64 2013/11/19 23:49:44 christos Exp $")
 #endif
 #if defined(HAVE_LIMITS_H)
 #include <limits.h>
+#endif
+#if defined(HAVE_LOCALE_H)
+#include <locale.h>
 #endif
 
 #ifndef SIZE_MAX
@@ -95,6 +98,7 @@ file_printf(struct magic_set *ms, const char *fmt, ...)
  * error - print best error message possible
  */
 /*VARARGS*/
+__attribute__((__format__(__printf__, 3, 0)))
 private void
 file_error_core(struct magic_set *ms, int error, const char *f, va_list va,
     size_t lineno)
@@ -226,7 +230,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 
 	/* try soft magic tests */
 	if ((ms->flags & MAGIC_NO_CHECK_SOFT) == 0)
-		if ((m = file_softmagic(ms, ubuf, nb, BINTEST,
+		if ((m = file_softmagic(ms, ubuf, nb, 0, BINTEST,
 		    looks_text)) != 0) {
 			if ((ms->flags & MAGIC_DEBUG) != 0)
 				(void)fprintf(stderr, "softmagic %d\n", m);
@@ -437,14 +441,14 @@ protected int
 file_replace(struct magic_set *ms, const char *pat, const char *rep)
 {
 	regex_t rx;
-	int rc;
+	int rc, rv = -1;
 
+	(void)setlocale(LC_CTYPE, "C");
 	rc = regcomp(&rx, pat, REG_EXTENDED);
 	if (rc) {
 		char errmsg[512];
 		(void)regerror(rc, &rx, errmsg, sizeof(errmsg));
 		file_magerror(ms, "regex error %d, (%s)", rc, errmsg);
-		return -1;
 	} else {
 		regmatch_t rm;
 		int nm = 0;
@@ -452,10 +456,13 @@ file_replace(struct magic_set *ms, const char *pat, const char *rep)
 			ms->o.buf[rm.rm_so] = '\0';
 			if (file_printf(ms, "%s%s", rep,
 			    rm.rm_eo != 0 ? ms->o.buf + rm.rm_eo : "") == -1)
-				return -1;
+				goto out;
 			nm++;
 		}
 		regfree(&rx);
-		return nm;
+		rv = nm;
 	}
+out:
+	(void)setlocale(LC_CTYPE, "");
+	return rv;
 }
