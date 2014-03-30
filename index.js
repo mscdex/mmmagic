@@ -16,7 +16,6 @@ module.exports = {
   MAGIC_CHECK: 0x000040, /* Print warnings to stderr */
   MAGIC_PRESERVE_ATIME: 0x000080, /* Restore access time on exit */
   MAGIC_RAW: 0x000100, /* Don't translate unprintable chars */
-  MAGIC_ERROR: 0x000200, /* Handle ENOENT etc as real errors */
   MAGIC_MIME_ENCODING: 0x000400, /* Return the MIME encoding */
   MAGIC_MIME: (0x000010|0x000400), /*(MAGIC_MIME_TYPE|MAGIC_MIME_ENCODING)*/
   MAGIC_APPLE: 0x000800, /* Return the Apple creator and type */
