@@ -184,7 +184,9 @@ class Magic : public ObjectWrap {
     static void DetectWork(uv_work_t* req) {
       Baton* baton = static_cast<Baton*>(req->data);
       const char* result;
-      struct magic_set *magic = magic_open(baton->flags | MAGIC_NO_CHECK_COMPRESS);
+      struct magic_set *magic = magic_open(baton->flags
+                                           | MAGIC_NO_CHECK_COMPRESS
+                                           | MAGIC_ERROR);
 
       if (magic == NULL) {
         baton->error_message = strdup(uv_strerror(
