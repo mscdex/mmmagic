@@ -94,7 +94,7 @@
 #undef HAVE_PREAD
 
 /* Define to 1 if you have the <stddef.h> header file. */
-#undef HAVE_STDDEF_H
+#define HAVE_STDDEF_H 1
 
 /* Define to 1 if the system has the type `pid_t'. */
 #undef HAVE_PID_T

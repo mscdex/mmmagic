@@ -26,9 +26,10 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: readcdf.c,v 1.37 2014/01/06 13:41:18 rrt Exp $")
+FILE_RCSID("@(#)$File: readcdf.c,v 1.40 2014/03/06 15:23:33 christos Exp $")
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
@@ -71,25 +72,61 @@ static const struct nv {
 	{ NULL,				NULL,			},
 };
 
+static const struct cv {
+	uint64_t clsid[2];
+	const char *mime;
+} clsid2mime[] = {
+	{
+    // 03/29/14 Brian White
+    // use ULL instead of LLU for best compatibility
+		{ 0x00000000000c1084ULL, 0x46000000000000c0ULL },
+		"x-msi",
+	}
+}, clsid2desc[] = {
+	{
+    // 03/29/14 Brian White
+    // use ULL instead of LLU for best compatibility
+		{ 0x00000000000c1084ULL, 0x46000000000000c0ULL },
+		"MSI Installer",
+	},
+};
+
+private const char *
+cdf_clsid_to_mime(const uint64_t clsid[2], const struct cv *cv)
+{
+	size_t i;
+	for (i = 0; cv[i].mime != NULL; i++) {
+		if (clsid[0] == cv[i].clsid[0] && clsid[1] == cv[i].clsid[1])
+			return cv[i].mime;
+	}
+	return NULL;
+}
+
 private const char *
 cdf_app_to_mime(const char *vbuf, const struct nv *nv)
 {
 	size_t i;
 	const char *rv = NULL;
+	char *old_lc_ctype;
 
+	old_lc_ctype = setlocale(LC_CTYPE, NULL);
+	assert(old_lc_ctype != NULL);
+	old_lc_ctype = strdup(old_lc_ctype);
+	assert(old_lc_ctype != NULL);
 	(void)setlocale(LC_CTYPE, "C");
 	for (i = 0; nv[i].pattern != NULL; i++)
 		if (strcasestr(vbuf, nv[i].pattern) != NULL) {
 			rv = nv[i].mime;
 			break;
 		}
-	(void)setlocale(LC_CTYPE, "");
+	(void)setlocale(LC_CTYPE, old_lc_ctype);
+	free(old_lc_ctype);
 	return rv;
 }
 
 private int
 cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
-    size_t count)
+    size_t count, const uint64_t clsid[2])
 {
         size_t i;
         cdf_timestamp_t tp;
@@ -98,6 +135,9 @@ cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
         const char *str = NULL;
         const char *s;
         int len;
+
+        if (!NOTMIME(ms))
+		str = cdf_clsid_to_mime(clsid, clsid2mime);
 
         for (i = 0; i < count; i++) {
                 cdf_print_property_name(buf, sizeof(buf), info[i].pi_id);
@@ -155,7 +195,7 @@ cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
                                                     buf, vbuf) == -1)
                                                         return -1;
                                         }
-                                } else if (info[i].pi_id ==
+                                } else if (str == NULL && info[i].pi_id ==
 				    CDF_PROPERTY_NAME_OF_APPLICATION) {
 					str = cdf_app_to_mime(vbuf, app2mime);
 				}
@@ -202,7 +242,7 @@ cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
 
 private int
 cdf_file_summary_info(struct magic_set *ms, const cdf_header_t *h,
-    const cdf_stream_t *sst)
+    const cdf_stream_t *sst, const uint64_t clsid[2])
 {
         cdf_summary_info_header_t si;
         cdf_property_info_t *info;
@@ -213,6 +253,8 @@ cdf_file_summary_info(struct magic_set *ms, const cdf_header_t *h,
                 return -1;
 
         if (NOTMIME(ms)) {
+		const char *str;
+
                 if (file_printf(ms, "Composite Document File V2 Document")
 		    == -1)
                         return -1;
@@ -240,13 +282,33 @@ cdf_file_summary_info(struct magic_set *ms, const cdf_header_t *h,
                                 return -2;
                         break;
                 }
+		str = cdf_clsid_to_mime(clsid, clsid2desc);
+		if (str)
+                        if (file_printf(ms, ", %s", str) == -1)
+				return -2;
         }
 
-        m = cdf_file_property_info(ms, info, count);
+        m = cdf_file_property_info(ms, info, count, clsid);
         free(info);
 
         return m == -1 ? -2 : m;
 }
+
+#ifdef notdef
+private char *
+format_clsid(char *buf, size_t len, const uint64_t uuid[2]) {
+	snprintf(buf, len, "%.8" PRIx64 "-%.4" PRIx64 "-%.4" PRIx64 "-%.4" 
+	    PRIx64 "-%.12" PRIx64,
+      // 03/29/14 Brian White
+      // use ULL instead of LLU for best compatibility
+	    (uuid[0] >> 32) & (uint64_t)0x000000000ffffffffULL,
+	    (uuid[0] >> 16) & (uint64_t)0x0000000000000ffffULL,
+	    (uuid[0] >>  0) & (uint64_t)0x0000000000000ffffULL, 
+	    (uuid[1] >> 48) & (uint64_t)0x0000000000000ffffULL,
+	    (uuid[1] >>  0) & (uint64_t)0x0000fffffffffffffULL);
+	return buf;
+}
+#endif
 
 protected int
 file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
@@ -260,6 +322,7 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
         int i;
         const char *expn = "";
         const char *corrupt = "corrupt: ";
+        const cdf_directory_t *root_storage;
 
         info.i_fd = fd;
         info.i_buf = buf;
@@ -293,12 +356,24 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
                 goto out2;
         }
 
-        if ((i = cdf_read_short_stream(&info, &h, &sat, &dir, &sst)) == -1) {
+        if ((i = cdf_read_short_stream(&info, &h, &sat, &dir, &sst,
+	    &root_storage)) == -1) {
                 expn = "Cannot read short stream";
                 goto out3;
         }
 #ifdef CDF_DEBUG
         cdf_dump_dir(&info, &h, &sat, &ssat, &sst, &dir);
+#endif
+#ifdef notdef
+	if (root_storage) {
+		if (NOTMIME(ms)) {
+			char clsbuf[128];
+			if (file_printf(ms, "CLSID %s, ",
+			    format_clsid(clsbuf, sizeof(clsbuf),
+			    root_storage->d_storage_uuid)) == -1)
+				return -1;
+		}
+	}
 #endif
 
         if ((i = cdf_read_summary_info(&info, &h, &sat, &ssat, &sst, &dir,
@@ -314,23 +389,22 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
 #ifdef CDF_DEBUG
         cdf_dump_summary_info(&h, &scn);
 #endif
-        if ((i = cdf_file_summary_info(ms, &h, &scn)) < 0)
+        if ((i = cdf_file_summary_info(ms, &h, &scn,
+	    root_storage->d_storage_uuid)) < 0)
                 expn = "Can't expand summary_info";
+
 	if (i == 0) {
 		const char *str = NULL;
 		cdf_directory_t *d;
 		char name[__arraycount(d->d_name)];
 		size_t j, k;
-		for (j = 0; j < dir.dir_len; j++) {
+
+		for (j = 0; str == NULL && j < dir.dir_len; j++) {
 			d = &dir.dir_tab[j];
 			for (k = 0; k < sizeof(name); k++)
 				name[k] = (char)cdf_tole2(d->d_name[k]);
-			if (NOTMIME(ms))
-				str = cdf_app_to_mime(name, name2desc);
-			else
-				str = cdf_app_to_mime(name, name2mime);
-			if (str != NULL)
-				break;
+			str = cdf_app_to_mime(name,
+			    NOTMIME(ms) ? name2desc : name2mime);
 		}
 		if (NOTMIME(ms)) {
 			if (str != NULL) {

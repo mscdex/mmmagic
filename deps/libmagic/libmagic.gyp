@@ -7,8 +7,11 @@
       'dependencies': [
         'pcre/pcre.gyp:libpcre',
       ],
-      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.14"' ],
+      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.18"' ],
       'conditions': [
+        [ 'OS!="freebsd" and OS!="mac"', {
+          'sources': [ 'src/fmtcheck.c' ],
+        }],
         [ 'OS=="win"', {
           'sources': [
             'src/asctime_r.c',

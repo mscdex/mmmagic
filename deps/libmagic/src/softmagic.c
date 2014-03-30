@@ -32,16 +32,12 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: softmagic.c,v 1.174 2014/02/12 23:20:53 christos Exp $")
+FILE_RCSID("@(#)$File: softmagic.c,v 1.180 2014/03/15 21:47:40 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
-#ifdef HAVE_FMTCHECK
-#include <stdio.h>
 #define F(a, b) fmtcheck((a), (b))
-#else
-#define F(a, b) (a)
-#endif
+#include <assert.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -71,7 +67,7 @@ private void cvt_16(union VALUETYPE *, const struct magic *);
 private void cvt_32(union VALUETYPE *, const struct magic *);
 private void cvt_64(union VALUETYPE *, const struct magic *);
 
-#define OFFSET_OOB(n, o, i)	((n) < (o) || (i) >= ((n) - (o)))
+#define OFFSET_OOB(n, o, i)	((n) < (o) || (i) > ((n) - (o)))
 /*
  * softmagic - lookup one file in parsed, in-memory copy of database
  * Passed the name and FILE * of one file to be typed.
@@ -352,10 +348,15 @@ check_fmt(struct magic_set *ms, struct magic *m)
 {
 	regex_t rx;
 	int rc, rv = -1;
+	char *old_lc_ctype;
 
 	if (strchr(m->desc, '%') == NULL)
 		return 0;
 
+	old_lc_ctype = setlocale(LC_CTYPE, NULL);
+	assert(old_lc_ctype != NULL);
+	old_lc_ctype = strdup(old_lc_ctype);
+	assert(old_lc_ctype != NULL);
 	(void)setlocale(LC_CTYPE, "C");
 	rc = regcomp(&rx, "%[-0-9\\.]*s", REG_EXTENDED|REG_NOSUB);
 	if (rc) {
@@ -367,7 +368,8 @@ check_fmt(struct magic_set *ms, struct magic *m)
 		regfree(&rx);
 		rv = !rc;
 	}
-	(void)setlocale(LC_CTYPE, "");
+	(void)setlocale(LC_CTYPE, old_lc_ctype);
+	free(old_lc_ctype);
 	return rv;
 }
 
@@ -531,8 +533,7 @@ mprint(struct magic_set *ms, struct magic *m)
 	case FILE_LEDATE:
 	case FILE_MEDATE:
 		if (file_printf(ms, F(m->desc, "%s"),
-		    file_fmttime(p->l, FILE_T_LOCAL,
-		    tbuf)) == -1)
+		    file_fmttime(p->l, FILE_T_LOCAL, tbuf)) == -1)
 			return -1;
 		t = ms->offset + sizeof(uint32_t);
 		break;
@@ -1733,14 +1734,14 @@ mget(struct magic_set *ms, const unsigned char *s, struct magic *m,
 		break;
 
 	case FILE_REGEX:
-		if (OFFSET_OOB(nbytes, offset, 0))
+		if (nbytes < offset)
 			return 0;
 		break;
 
 	case FILE_INDIRECT:
 		if (offset == 0)
 			return 0;
-		if (OFFSET_OOB(nbytes, offset, 0))
+		if (nbytes < offset)
 			return 0;
 		sbuf = ms->o.buf;
 		soffset = ms->offset;
@@ -1755,16 +1756,20 @@ mget(struct magic_set *ms, const unsigned char *s, struct magic *m,
 		ms->offset = soffset;
 		if (rv == 1) {
 			if ((ms->flags & (MAGIC_MIME|MAGIC_APPLE)) == 0 &&
-			    file_printf(ms, F(m->desc, "%u"), offset) == -1)
+			    file_printf(ms, F(m->desc, "%u"), offset) == -1) {
+				free(rbuf);
 				return -1;
-			if (file_printf(ms, "%s", rbuf) == -1)
+			}
+			if (file_printf(ms, "%s", rbuf) == -1) {
+				free(rbuf);
 				return -1;
-			free(rbuf);
+			}
 		}
+		free(rbuf);
 		return rv;
 
 	case FILE_USE:
-		if (OFFSET_OOB(nbytes, offset, 0))
+		if (nbytes < offset)
 			return 0;
 		sbuf = m->value.s;
 		if (*sbuf == '^') {
@@ -1884,6 +1889,7 @@ magiccheck(struct magic_set *ms, struct magic *m)
 	double dl, dv;
 	int matched;
 	union VALUETYPE *p = &ms->ms_value;
+	char *old_lc_ctype;
 
 	switch (m->type) {
 	case FILE_BYTE:
@@ -2042,6 +2048,11 @@ magiccheck(struct magic_set *ms, struct magic *m)
 		if (ms->search.s == NULL)
 			return 0;
 
+		old_lc_ctype = setlocale(LC_CTYPE, NULL);
+		assert(old_lc_ctype != NULL);
+		old_lc_ctype = strdup(old_lc_ctype);
+		assert(old_lc_ctype != NULL);
+		(void)setlocale(LC_CTYPE, "C");
 		l = 0;
 		rc = regcomp(&rx, m->value.s,
 		    REG_EXTENDED|REG_NEWLINE|
@@ -2090,6 +2101,8 @@ magiccheck(struct magic_set *ms, struct magic *m)
 			}
 			regfree(&rx);
 		}
+		(void)setlocale(LC_CTYPE, old_lc_ctype);
+		free(old_lc_ctype);
 		if (v == (uint64_t)-1)
 			return -1;
 		break;

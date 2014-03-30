@@ -27,10 +27,11 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: funcs.c,v 1.67 2014/02/12 23:20:53 christos Exp $")
+FILE_RCSID("@(#)$File: funcs.c,v 1.70 2014/03/14 19:02:37 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
+#include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,8 +175,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 	const char *code_mime = "binary";
 	const char *type = "application/octet-stream";
 	const char *def = "data";
-
-
+	const char *ftype = NULL;
 
 	if (nb == 0) {
 		def = "empty";
@@ -188,7 +188,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 
 	if ((ms->flags & MAGIC_NO_CHECK_ENCODING) == 0) {
 		looks_text = file_encoding(ms, ubuf, nb, &u8buf, &ulen,
-		    &code, &code_mime, &type);
+		    &code, &code_mime, &ftype);
 	}
 
 #ifdef __EMX__
@@ -262,19 +262,6 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((unu
 			if ((ms->flags & MAGIC_DEBUG) != 0)
 				(void)fprintf(stderr, "ascmagic %d\n", m);
 			goto done;
-		}
-
-		/* try to discover text encoding */
-		if ((ms->flags & MAGIC_NO_CHECK_ENCODING) == 0) {
-			if (looks_text == 0)
-				if ((m = file_ascmagic_with_encoding( ms, ubuf,
-				    nb, u8buf, ulen, code, type, looks_text))
-				    != 0) {
-					if ((ms->flags & MAGIC_DEBUG) != 0)
-						(void)fprintf(stderr,
-						    "ascmagic/enc %d\n", m);
-					goto done;
-				}
 		}
 	}
 
@@ -442,7 +429,12 @@ file_replace(struct magic_set *ms, const char *pat, const char *rep)
 {
 	regex_t rx;
 	int rc, rv = -1;
+	char *old_lc_ctype;
 
+	old_lc_ctype = setlocale(LC_CTYPE, NULL);
+	assert(old_lc_ctype != NULL);
+	old_lc_ctype = strdup(old_lc_ctype);
+	assert(old_lc_ctype != NULL);
 	(void)setlocale(LC_CTYPE, "C");
 	rc = regcomp(&rx, pat, REG_EXTENDED);
 	if (rc) {
@@ -463,6 +455,7 @@ file_replace(struct magic_set *ms, const char *pat, const char *rep)
 		rv = nm;
 	}
 out:
-	(void)setlocale(LC_CTYPE, "");
+	(void)setlocale(LC_CTYPE, old_lc_ctype);
+	free(old_lc_ctype);
 	return rv;
 }
