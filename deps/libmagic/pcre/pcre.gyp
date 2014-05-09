@@ -63,6 +63,9 @@
         [ 'OS=="freebsd"', {
           'include_dirs': [ 'config/freebsd' ],
         }],
+        [ 'OS=="openbsd"', {
+          'include_dirs': [ 'config/openbsd' ],
+        }],
         [ 'OS=="solaris"', {
           'include_dirs': [ 'config/sunos' ],
         }],
