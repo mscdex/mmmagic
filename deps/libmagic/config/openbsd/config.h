@@ -327,33 +327,5 @@
    such a type exists and the standard includes do not define it. */
 /* #undef uint8_t */
 
-#ifndef HAVE_UINT8_T
-typedef unsigned char uint8_t;
-#endif
-#ifndef HAVE_UINT16_T
-typedef unsigned short uint16_t;
-#endif
-#ifndef HAVE_UINT32_T
-typedef unsigned int uint32_t;
-#endif
-#ifndef HAVE_INT32_T
-typedef int int32_t;
-#endif
-#ifndef HAVE_UINT64_T
-#if SIZEOF_LONG_LONG == 8
-typedef unsigned long long uint64_t;
-#else
-typedef unsigned long uint64_t;
-#endif
-#endif
-#ifndef HAVE_INT64_T
-#if SIZEOF_LONG_LONG == 8
-typedef long long int64_t;
-#else
-typedef long int64_t;
-#endif
-#endif
-
-
 /* Define as `fork' if `vfork' does not work. */
 /* #undef vfork */
