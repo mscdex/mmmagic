@@ -90,9 +90,6 @@
 /* Define to 1 if you have a working `mmap' system call. */
 #define HAVE_MMAP 1
 
-/* Define to 1 if you have the `pread' function. */
-#define HAVE_PREAD 1
-
 /* Define to 1 if you have the <stddef.h> header file. */
 #define HAVE_STDDEF_H 1
 

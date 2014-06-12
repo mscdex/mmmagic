@@ -518,9 +518,8 @@ extern char *sys_errlist[];
 #define strtoul(a, b, c)	strtol(a, b, c)
 #endif
 
-#ifndef HAVE_PREAD
 ssize_t pread(int, void *, size_t, off_t);
-#endif
+
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **, const char *, va_list);
 #endif
