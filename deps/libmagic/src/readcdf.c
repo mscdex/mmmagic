@@ -26,7 +26,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: readcdf.c,v 1.40 2014/03/06 15:23:33 christos Exp $")
+FILE_RCSID("@(#)$File: readcdf.c,v 1.44 2014/05/14 23:22:48 christos Exp $")
 #endif
 
 #include <assert.h>
@@ -81,13 +81,19 @@ static const struct cv {
     // use ULL instead of LLU for best compatibility
 		{ 0x00000000000c1084ULL, 0x46000000000000c0ULL },
 		"x-msi",
-	}
+	},
+	{	{ 0,			 0			},
+		NULL,
+	},
 }, clsid2desc[] = {
 	{
     // 03/29/14 Brian White
     // use ULL instead of LLU for best compatibility
 		{ 0x00000000000c1084ULL, 0x46000000000000c0ULL },
 		"MSI Installer",
+	},
+	{	{ 0,			 0			},
+		NULL,
 	},
 };
 
@@ -126,7 +132,7 @@ cdf_app_to_mime(const char *vbuf, const struct nv *nv)
 
 private int
 cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
-    size_t count, const uint64_t clsid[2])
+    size_t count, const cdf_directory_t *root_storage)
 {
         size_t i;
         cdf_timestamp_t tp;
@@ -136,8 +142,9 @@ cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
         const char *s;
         int len;
 
-        if (!NOTMIME(ms))
-		str = cdf_clsid_to_mime(clsid, clsid2mime);
+        if (!NOTMIME(ms) && root_storage)
+		str = cdf_clsid_to_mime(root_storage->d_storage_uuid,
+		    clsid2mime);
 
         for (i = 0; i < count; i++) {
                 cdf_print_property_name(buf, sizeof(buf), info[i].pi_id);
@@ -179,12 +186,11 @@ cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
                                 if (info[i].pi_type == CDF_LENGTH32_WSTRING)
                                     k++;
                                 s = info[i].pi_str.s_buf;
-                                for (j = 0; j < sizeof(vbuf) && len--;
-                                    j++, s += k) {
+                                for (j = 0; j < sizeof(vbuf) && len--; s += k) {
                                         if (*s == '\0')
                                                 break;
                                         if (isprint((unsigned char)*s))
-                                                vbuf[j] = *s;
+                                                vbuf[j++] = *s;
                                 }
                                 if (j == sizeof(vbuf))
                                         --j;
@@ -242,7 +248,7 @@ cdf_file_property_info(struct magic_set *ms, const cdf_property_info_t *info,
 
 private int
 cdf_file_summary_info(struct magic_set *ms, const cdf_header_t *h,
-    const cdf_stream_t *sst, const uint64_t clsid[2])
+    const cdf_stream_t *sst, const cdf_directory_t *root_storage)
 {
         cdf_summary_info_header_t si;
         cdf_property_info_t *info;
@@ -282,13 +288,16 @@ cdf_file_summary_info(struct magic_set *ms, const cdf_header_t *h,
                                 return -2;
                         break;
                 }
-		str = cdf_clsid_to_mime(clsid, clsid2desc);
-		if (str)
-                        if (file_printf(ms, ", %s", str) == -1)
-				return -2;
-        }
+		if (root_storage) {
+			str = cdf_clsid_to_mime(root_storage->d_storage_uuid,
+			    clsid2desc);
+			if (str)
+				if (file_printf(ms, ", %s", str) == -1)
+					return -2;
+			}
+		}
 
-        m = cdf_file_property_info(ms, info, count, clsid);
+        m = cdf_file_property_info(ms, info, count, root_storage);
         free(info);
 
         return m == -1 ? -2 : m;
@@ -322,6 +331,8 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
         int i;
         const char *expn = "";
         const char *corrupt = "corrupt: ";
+
+        // 06/13/14 Brian White
         const cdf_directory_t *root_storage;
 
         info.i_fd = fd;
@@ -376,6 +387,30 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
 	}
 #endif
 
+	if ((i = cdf_read_user_stream(&info, &h, &sat, &ssat, &sst, &dir,
+	    "FileHeader", &scn)) != -1) {
+#define HWP5_SIGNATURE "HWP Document File"
+		if (scn.sst_dirlen >= sizeof(HWP5_SIGNATURE) - 1
+		    && memcmp(scn.sst_tab, HWP5_SIGNATURE,
+		    sizeof(HWP5_SIGNATURE) - 1) == 0) {
+		    if (NOTMIME(ms)) {
+			if (file_printf(ms,
+			    "Hangul (Korean) Word Processor File 5.x") == -1)
+			    return -1;
+		    } else {
+			if (file_printf(ms, "application/x-hwp") == -1)
+			    return -1;
+		    }
+		    i = 1;
+		    goto out5;
+		} else {
+		    free(scn.sst_tab);
+		    scn.sst_tab = NULL;
+		    scn.sst_len = 0;
+		    scn.sst_dirlen = 0;
+		}
+	}
+
         if ((i = cdf_read_summary_info(&info, &h, &sat, &ssat, &sst, &dir,
             &scn)) == -1) {
                 if (errno == ESRCH) {
@@ -389,9 +424,8 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
 #ifdef CDF_DEBUG
         cdf_dump_summary_info(&h, &scn);
 #endif
-        if ((i = cdf_file_summary_info(ms, &h, &scn,
-	    root_storage->d_storage_uuid)) < 0)
-                expn = "Can't expand summary_info";
+        if ((i = cdf_file_summary_info(ms, &h, &scn, root_storage)) < 0)
+            expn = "Can't expand summary_info";
 
 	if (i == 0) {
 		const char *str = NULL;
@@ -420,6 +454,7 @@ file_trycdf(struct magic_set *ms, int fd, const unsigned char *buf,
 			i = 1;
 		}
 	}
+out5:
         free(scn.sst_tab);
 out4:
         free(sst.sst_tab);

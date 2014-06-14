@@ -7,7 +7,7 @@
       'dependencies': [
         'pcre/pcre.gyp:libpcre',
       ],
-      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.18"' ],
+      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.19"' ],
       'conditions': [
         [ 'OS!="freebsd" and OS!="mac"', {
           'sources': [ 'src/fmtcheck.c' ],
