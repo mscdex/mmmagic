@@ -3462,7 +3462,7 @@ if ((options & PCRE_CASELESS) != 0)
   if ((options & PCRE_UTF8) != 0)
     {
     int rc;
-    pcre_uint32 oc, od;
+    pcre_uint32 oc, od = 0;
 
     options &= ~PCRE_CASELESS;   /* Remove for recursive calls */
     c = start;

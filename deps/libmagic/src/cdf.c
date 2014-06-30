@@ -43,7 +43,6 @@ FILE_RCSID("@(#)$File: cdf.c,v 1.63 2014/06/09 13:04:37 christos Exp $")
 #include <err.h>
 #endif
 #include <stdlib.h>
-//#include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
