@@ -3,6 +3,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <locale.h>
+#ifdef _WIN32
+# include <wchar.h>
+#endif
+
 #include "magic.h"
 
 using namespace node;
@@ -121,7 +126,31 @@ class Magic : public ObjectWrap {
       baton->error_message = NULL;
       baton->request.data = baton;
       baton->callback = Persistent<Function>::New(callback);
+#ifdef _WIN32
+      // convert UTF8 filename string to wide-character string back to C-string
+      const char* ofn = (const char*)*str;
+      char* cfn = NULL;
+      int wLen;
+      wLen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, ofn, -1, NULL, 0);
+      if (wLen) {
+        wchar_t* wfn = (wchar_t*)malloc(wLen * sizeof(wchar_t));
+        if (wfn) {
+          if (MultiByteToWideChar(CP_UTF8, 0, ofn, -1, wfn, wLen) != 0) {
+            int cLen = wcstombs(NULL, wfn, 0);
+            if (cLen) {
+              cfn = (char*)malloc(cLen + 1);
+              if (cfn)
+                wcstombs(cfn, wfn, cLen + 1);
+            }
+          }
+          free(wfn);
+          wfn = NULL;
+        }
+      }
+      baton->data = cfn;
+#else
       baton->data = strdup((const char*)*str);
+#endif
       baton->dataIsPath = true;
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
@@ -298,6 +327,7 @@ class Magic : public ObjectWrap {
 extern "C" {
   void init(Handle<Object> target) {
     HandleScope scope;
+    (void)setlocale(LC_ALL, "");
     Magic::Initialize(target);
   }
 
