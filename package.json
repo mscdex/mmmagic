@@ -8,5 +8,5 @@
   "keywords": [ "magic", "libmagic", "file", "filetype", "mime", "mimetype" ],
   "licenses": [ { "type": "MIT", "url": "http://github.com/mscdex/mmmagic/raw/master/LICENSE" } ],
   "repository" : { "type": "git", "url": "http://github.com/mscdex/mmmagic.git" },
-  "dependencies": { "nan": "~0.8.0" }
+  "dependencies": { "nan": "~1.4.1" }
 }

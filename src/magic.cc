@@ -88,10 +88,8 @@ class DetectWorker : public NanAsyncWorker {
 
       const unsigned argc = 2;
       Local<Value> argv[argc] = {
-        NanNewLocal<Value>(Null()),
-        NanNewLocal<Value>(result
-                          ? String::New(result)
-                          : String::Empty())
+        NanNull(),
+        NanNew(result)
       };
       callback->Call(argc, argv);
     }
@@ -101,7 +99,8 @@ class DetectWorker : public NanAsyncWorker {
       const char * message = e != NULL ? e : "unknown error";
       char * m = static_cast<char *>(::operator new(strlen(message) + 1));
       strcpy(m, message);
-      errmsg = m;
+      // TODO: Check if commenting out this line breaks anything
+      // errmsg = m;
     }
 
     char* data;
@@ -252,20 +251,20 @@ class Magic : public ObjectWrap {
     static void Initialize(Handle<Object> target) {
       NanScope();
 
-      Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
-      Local<String> name = String::NewSymbol("Magic");
+      Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
+      Local<String> name = NanNew("Magic");
 
       tpl->InstanceTemplate()->SetInternalFieldCount(1);
       tpl->SetClassName(name);
 
       NODE_SET_PROTOTYPE_METHOD(tpl, "detectFile", DetectFile);
       NODE_SET_PROTOTYPE_METHOD(tpl, "detect", Detect);
-      target->Set(String::NewSymbol("setFallback"),
-        FunctionTemplate::New(SetFallback)->GetFunction());
+      target->Set(NanNew<String>("setFallback"),
+        NanNew<FunctionTemplate>(SetFallback)->GetFunction());
 
       target->Set(name, tpl->GetFunction());
 
-      NanAssignPersistent(FunctionTemplate, constructor, tpl);
+      NanAssignPersistent(constructor, tpl);
     }
 };
 
