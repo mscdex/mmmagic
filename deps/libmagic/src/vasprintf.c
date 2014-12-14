@@ -1,3 +1,4 @@
+// XXX: change by mscdex
 // from:
 // http://www.redantigua.com/c-ex-beginner-concat-strings-asprintf.html
 

@@ -3,6 +3,7 @@
 FILE_RCSID("@(#)$File: pread.c,v 1.3 2014/09/15 19:11:25 christos Exp $")
 #endif  /* lint */
 #include <fcntl.h>
+// XXX: change by mscdex
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif

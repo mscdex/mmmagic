@@ -33,6 +33,7 @@
 #if !HAVE_GETLINE
 #include <stdlib.h>
 #include <stdio.h>
+// XXX: change by mscdex
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: apprentice.c,v 1.216 2014/09/24 19:49:07 christos Exp $")
+FILE_RCSID("@(#)$File: apprentice.c,v 1.227 2014/11/28 02:46:39 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -50,6 +50,7 @@ FILE_RCSID("@(#)$File: apprentice.c,v 1.216 2014/09/24 19:49:07 christos Exp $")
 #ifdef QUICK
 #include <sys/mman.h>
 #endif
+// XXX: change by mscdex
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
@@ -406,10 +407,11 @@ add_mlist(struct mlist *mlp, struct magic_map *map, size_t idx)
 {
 	struct mlist *ml;
 
+	mlp->map = idx == 0 ? map : NULL;
 	if ((ml = CAST(struct mlist *, malloc(sizeof(*ml)))) == NULL)
 		return -1;
 
-	ml->map = idx == 0 ? map : NULL;
+	ml->map = NULL;
 	ml->magic = map->magic[idx];
 	ml->nmagic = map->nmagic[idx];
 
@@ -459,8 +461,7 @@ apprentice_1(struct magic_set *ms, const char *fn, int action)
 	for (i = 0; i < MAGIC_SETS; i++) {
 		if (add_mlist(ms->mlist[i], map, i) == -1) {
 			file_oomem(ms, sizeof(*ml));
-			apprentice_unmap(map);
-			return -1;
+			goto fail;
 		}
 	}
 
@@ -473,8 +474,16 @@ apprentice_1(struct magic_set *ms, const char *fn, int action)
 			apprentice_list(ms->mlist[i], TEXTTEST);
 		}
 	}
-#endif /* COMPILE_ONLY */
 	return 0;
+fail:
+	for (i = 0; i < MAGIC_SETS; i++) {
+		mlist_free(ms->mlist[i]);
+		ms->mlist[i] = NULL;
+	}
+	return -1;
+#else
+	return 0;
+#endif /* COMPILE_ONLY */
 }
 
 protected void
@@ -518,6 +527,10 @@ file_ms_alloc(int flags)
 		ms->mlist[i] = NULL;
 	ms->file = "unknown";
 	ms->line = 0;
+	ms->indir_max = FILE_INDIR_MAX;
+	ms->name_max = FILE_NAME_MAX;
+	ms->elf_shnum_max = FILE_ELF_SHNUM_MAX;
+	ms->elf_phnum_max = FILE_ELF_PHNUM_MAX;
 	return ms;
 free:
 	free(ms);
@@ -529,17 +542,21 @@ apprentice_unmap(struct magic_map *map)
 {
 	if (map == NULL)
 		return;
-	if (map->p != NULL && map->type != MAP_TYPE_USER) {
+
+	switch (map->type) {
 #ifdef QUICK
-		if (map->type == MAP_TYPE_MMAP)
+	case MAP_TYPE_MMAP:
+		if (map->p)
 			(void)munmap(map->p, map->len);
-		else
+		break;
 #endif
+	case MAP_TYPE_MALLOC:
 		free(map->p);
-	} else {
-		uint32_t j;
-		for (j = 0; j < MAGIC_SETS; j++)
-			free(map->magic[j]);
+		break;
+	case MAP_TYPE_USER:
+		break;
+	default:
+		abort();
 	}
 	free(map);
 }
@@ -558,19 +575,19 @@ mlist_alloc(void)
 private void
 mlist_free(struct mlist *mlist)
 {
-	struct mlist *ml;
+	struct mlist *ml, *next;
 
 	if (mlist == NULL)
 		return;
 
-	for (ml = mlist->next; ml != mlist;) {
-		struct mlist *next = ml->next;
+	ml = mlist->next;
+	for (ml = mlist->next; (next = ml->next) != NULL; ml = next) {
 		if (ml->map)
 			apprentice_unmap(ml->map);
 		free(ml);
-		ml = next;
+		if (ml == mlist)
+			break;
 	}
-	free(ml);
 }
 
 #ifndef COMPILE_ONLY
@@ -579,7 +596,7 @@ protected int
 buffer_apprentice(struct magic_set *ms, struct magic **bufs,
     size_t *sizes, size_t nbufs)
 {
-	size_t i;
+	size_t i, j;
 	struct mlist *ml;
 	struct magic_map *map;
 
@@ -595,31 +612,30 @@ buffer_apprentice(struct magic_set *ms, struct magic **bufs,
 		mlist_free(ms->mlist[i]);
 		if ((ms->mlist[i] = mlist_alloc()) == NULL) {
 			file_oomem(ms, sizeof(*ms->mlist[i]));
-			if (i != 0) {
-				--i;
-				do
-					mlist_free(ms->mlist[i]);
-				while (i != 0);
-			}
-			return -1;
+			goto fail;
 		}
 	}
 
 	for (i = 0; i < nbufs; i++) {
 		map = apprentice_buf(ms, bufs[i], sizes[i]);
 		if (map == NULL)
-			return -1;
+			goto fail;
 
-		for (i = 0; i < MAGIC_SETS; i++) {
-			if (add_mlist(ms->mlist[i], map, i) == -1) {
+		for (j = 0; j < MAGIC_SETS; j++) {
+			if (add_mlist(ms->mlist[j], map, j) == -1) {
 				file_oomem(ms, sizeof(*ml));
-				apprentice_unmap(map);
-				return -1;
+				goto fail;
 			}
 		}
 	}
 
 	return 0;
+fail:
+	for (i = 0; i < MAGIC_SETS; i++) {
+		mlist_free(ms->mlist[i]);
+		ms->mlist[i] = NULL;
+	}
+	return -1;
 }
 #endif
 
@@ -648,11 +664,9 @@ file_apprentice(struct magic_set *ms, const char *fn, int action)
 		mlist_free(ms->mlist[i]);
 		if ((ms->mlist[i] = mlist_alloc()) == NULL) {
 			file_oomem(ms, sizeof(*ms->mlist[i]));
-			if (i != 0) {
-				--i;
-				do
-					mlist_free(ms->mlist[i]);
-				while (i != 0);
+			while (i-- > 0) {
+				mlist_free(ms->mlist[i]);
+				ms->mlist[i] = NULL;
 			}
 			free(mfn);
 			return -1;
@@ -678,6 +692,7 @@ file_apprentice(struct magic_set *ms, const char *fn, int action)
 			mlist_free(ms->mlist[i]);
 			ms->mlist[i] = NULL;
 		}
+    // XXX: change by mscdex
 		file_error(ms, 0, "could not load any valid magic files!");
 		return -1;
 	}
@@ -1265,7 +1280,7 @@ apprentice_load(struct magic_set *ms, const char *fn, int action)
 	struct dirent *d;
 
 	memset(mset, 0, sizeof(mset));
-	//ms->flags |= MAGIC_CHECK;	/* Enable checks for parsed files */
+  // XXX: change by mscdex
 
 
 	if ((map = CAST(struct magic_map *, calloc(1, sizeof(*map)))) == NULL)
@@ -1375,7 +1390,7 @@ file_signextend(struct magic_set *ms, struct magic *m, uint64_t v)
 		 * the sign extension must have happened.
 		 */
 		case FILE_BYTE:
-			v = (char) v;
+			v = (signed char) v;
 			break;
 		case FILE_SHORT:
 		case FILE_BESHORT:
@@ -2763,7 +2778,7 @@ eatsize(const char **p)
 }
 
 /*
- * handle a buffer containging a compiled file.
+ * handle a buffer containing a compiled file.
  */
 private struct magic_map *
 apprentice_buf(struct magic_set *ms, struct magic *buf, size_t len)
