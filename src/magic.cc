@@ -27,6 +27,7 @@ struct Baton {
     int flags;
 
     bool error;
+    bool free_error;
     char* error_message;
 
     const char* result;
@@ -124,6 +125,7 @@ class Magic : public ObjectWrap {
 
       Baton* baton = new Baton();
       baton->error = false;
+      baton->free_error = true;
       baton->error_message = NULL;
       baton->request.data = baton;
       baton->callback = Persistent<Function>::New(callback);
@@ -168,6 +170,7 @@ class Magic : public ObjectWrap {
 
       Baton* baton = new Baton();
       baton->error = false;
+      baton->free_error = true;
       baton->error_message = NULL;
       baton->request.data = baton;
       baton->callback = Persistent<Function>::New(callback);
@@ -231,6 +234,7 @@ class Magic : public ObjectWrap {
         }
         if (fd == -1) {
           baton->error = true;
+          baton->free_error = false;
           baton->error_message = "Error while opening file";
           magic_close(magic);
           return;
@@ -261,7 +265,8 @@ class Magic : public ObjectWrap {
 
       if (baton->error) {
         Local<Value> err = Exception::Error(String::New(baton->error_message));
-        free(baton->error_message);
+        if (baton->free_error)
+          free(baton->error_message);
 
         const unsigned argc = 1;
         Local<Value> argv[argc] = { err };
