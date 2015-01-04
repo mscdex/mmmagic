@@ -35,7 +35,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: compress.c,v 1.75 2014/12/04 15:56:46 christos Exp $")
+FILE_RCSID("@(#)$File: compress.c,v 1.77 2014/12/12 16:33:01 christos Exp $")
 #endif
 
 #include "magic.h"
@@ -45,6 +45,7 @@ FILE_RCSID("@(#)$File: compress.c,v 1.75 2014/12/04 15:56:46 christos Exp $")
 #endif
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 // XXX: change by mscdex
 #ifndef _MSC_VER
 #include <sys/ioctl.h>
@@ -104,10 +105,12 @@ file_zmagic(struct magic_set *ms, int fd, const char *name,
 	size_t i, nsz;
 	int rv = 0;
 	int mime = ms->flags & MAGIC_MIME;
+	sig_t osigpipe;
 
 	if ((ms->flags & MAGIC_COMPRESS) == 0)
 		return 0;
 
+	osigpipe = signal(SIGPIPE, SIG_IGN);
 	for (i = 0; i < ncompr; i++) {
 		if (nbytes < compr[i].maglen)
 			continue;
@@ -134,6 +137,7 @@ file_zmagic(struct magic_set *ms, int fd, const char *name,
 		}
 	}
 error:
+	(void)signal(SIGPIPE, osigpipe);
 	free(newbuf);
 	ms->flags |= MAGIC_COMPRESS;
 	return rv;
@@ -509,11 +513,16 @@ err:
 			    strerror(errno));
 #endif
 			n = NODATA;
-		} else if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		} else if (!WIFEXITED(status)) {
 #ifdef DEBUG
-			(void)fprintf(stderr, "Child status (0x%x)\n", status);
+			(void)fprintf(stderr, "Child not exited (0x%x)\n",
+			    status);
 #endif
-			n = NODATA;
+		} else if (WEXITSTATUS(status) != 0) {
+#ifdef DEBUG
+			(void)fprintf(stderr, "Child exited (0x%d)\n",
+			    WEXITSTATUS(status));
+#endif
 		}
 
 		(void) close(fdin[0]);
