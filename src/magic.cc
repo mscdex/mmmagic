@@ -182,8 +182,16 @@ class Magic : public ObjectWrap {
                                            | MAGIC_ERROR);
 
       if (magic == NULL) {
+#if NODE_MODULE_VERSION <= 0x000B
         baton->error_message = strdup(uv_strerror(
                                         uv_last_error(uv_default_loop())));
+#else
+# ifdef _MSC_VER
+        baton->error_message = strdup(uv_strerror(GetLastError()));
+# else
+        baton->error_message = strdup(uv_strerror(errno));
+# endif
+#endif
       } else if (magic_load(magic, baton->path) == -1
                  && magic_load(magic, fallbackPath) == -1) {
         baton->error_message = strdup(magic_error(magic));
@@ -297,15 +305,15 @@ class Magic : public ObjectWrap {
       Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
 
       NanAssignPersistent(constructor, tpl);
-      constructor->InstanceTemplate()->SetInternalFieldCount(1);
-      constructor->SetClassName(NanNew<String>("Magic"));
+      tpl->InstanceTemplate()->SetInternalFieldCount(1);
+      tpl->SetClassName(NanNew<String>("Magic"));
 
-      NODE_SET_PROTOTYPE_METHOD(constructor, "detectFile", DetectFile);
-      NODE_SET_PROTOTYPE_METHOD(constructor, "detect", Detect);
-      target->Set(String::NewSymbol("setFallback"),
+      NODE_SET_PROTOTYPE_METHOD(tpl, "detectFile", DetectFile);
+      NODE_SET_PROTOTYPE_METHOD(tpl, "detect", Detect);
+      target->Set(NanNew<String>("setFallback"),
         NanNew<FunctionTemplate>(SetFallback)->GetFunction());
 
-      target->Set(NanNew<String>("Magic"), constructor->GetFunction());
+      target->Set(NanNew<String>("Magic"), tpl->GetFunction());
     }
 };
 
