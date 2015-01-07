@@ -7,6 +7,7 @@
       ],
       'include_dirs': [
         'deps/libmagic/src',
+        "<!(node -e \"require('nan')\")"
       ],
       'cflags!': [ '-O2' ],
       'cflags+': [ '-O3' ],
