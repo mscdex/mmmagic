@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <node.h>
 #include <node_buffer.h>
 #include <string.h>
@@ -10,13 +11,97 @@
 #endif
 
 #include "magic.h"
+#include "nan.h"
 
 using namespace node;
 using namespace v8;
 
-struct Baton {
-    uv_work_t request;
-    Persistent<Function> callback;
+static Persistent<FunctionTemplate> constructor;
+static const char* fallbackPath;
+
+class DetectWorker : public NanAsyncWorker {
+  public:
+    DetectWorker(NanCallback* callback, const char* d, uint32_t len, const char* path, int flags)
+      : NanAsyncWorker(callback),
+        data(static_cast<char *>(malloc(len))),
+        dataLen(len),
+        dataIsPath(false),
+        path(path),
+        flags(flags),
+        free_error(true),
+        result(NULL) {
+      memcpy(data, d, len);
+    }
+
+    DetectWorker(NanCallback* callback, const char* dataPath, const char* path, int flags)
+      : NanAsyncWorker(callback),
+        data(strdup(dataPath)),
+        dataLen(0),
+        dataIsPath(true),
+        path(path),
+        flags(flags),
+        free_error(true),
+        result(NULL)
+        {
+    }
+
+    virtual ~DetectWorker () {
+      if (result)
+        free((void*)result);
+
+      free(data);
+    }
+
+    void Execute () {
+      const char* r;
+      struct magic_set *magic = magic_open(flags | MAGIC_NO_CHECK_COMPRESS);
+
+      if (magic == NULL) {
+        UpdateErrmsg(strerror(errno));
+      } else if (magic_load(magic, path) == -1
+                 && magic_load(magic, fallbackPath) == -1) {
+        UpdateErrmsg(magic_error(magic));
+        magic_close(magic);
+        magic = NULL;
+      }
+
+      if (magic == NULL)
+        return;
+
+      if (dataIsPath)
+        r = magic_file(magic, data);
+      else
+        r = magic_buffer(magic, (const void*)data, dataLen);
+
+      const char * e = magic_error(magic);
+      if (r == NULL || e != NULL)
+        UpdateErrmsg(e);
+      else
+        result = strdup(r);
+
+      magic_close(magic);
+    }
+
+  protected:
+    void HandleOKCallback () {
+      NanScope();
+
+      const unsigned argc = 2;
+      Local<Value> argv[argc] = {
+        NanNull(),
+        NanNew(result)
+      };
+      callback->Call(argc, argv);
+    }
+
+  private:
+    void UpdateErrmsg(const char * e) {
+      const char * message = e != NULL ? e : "unknown error";
+      char * m = static_cast<char *>(::operator new(strlen(message) + 1));
+      strcpy(m, message);
+      // TODO: Check if commenting out this line breaks anything
+      // errmsg = m;
+    }
 
     char* data;
     uint32_t dataLen;
@@ -32,9 +117,6 @@ struct Baton {
 
     const char* result;
 };
-
-static Persistent<FunctionTemplate> constructor;
-static const char* fallbackPath;
 
 class Magic : public ObjectWrap {
   public:
@@ -58,8 +140,8 @@ class Magic : public ObjectWrap {
       }
     }
 
-    static Handle<Value> New(const Arguments& args) {
-      HandleScope scope;
+    static NAN_METHOD(New) {
+      NanScope();
 #ifndef _WIN32
       int mflags = MAGIC_SYMLINK;
 #else
@@ -69,17 +151,14 @@ class Magic : public ObjectWrap {
       bool use_bundled = true;
 
       if (!args.IsConstructCall()) {
-        return ThrowException(Exception::TypeError(
-            String::New("Use `new` to create instances of this object."))
-        );
+        return NanThrowTypeError("Use `new` to create instances of this object.");
       }
 
       if (args.Length() > 1) {
         if (args[1]->IsInt32())
           mflags = args[1]->Int32Value();
         else {
-          return ThrowException(Exception::TypeError(
-              String::New("Second argument must be an integer")));
+          return NanThrowTypeError("Second argument must be an integer");
         }
       }
 
@@ -94,8 +173,7 @@ class Magic : public ObjectWrap {
           use_bundled = false;
           path = strdup(magic_getpath(NULL, 0/*FILE_LOAD*/));
         } else {
-          return ThrowException(Exception::TypeError(
-              String::New("First argument must be a string or integer")));
+          return NanThrowTypeError("First argument must be a string or integer");
         }
       }
 
@@ -103,62 +181,42 @@ class Magic : public ObjectWrap {
       obj->Wrap(args.This());
       obj->Ref();
 
-      return args.This();
+      NanReturnValue(args.This());
     }
 
-    static Handle<Value> DetectFile(const Arguments& args) {
-      HandleScope scope;
+    static NAN_METHOD(DetectFile) {
+      NanScope();
       Magic* obj = ObjectWrap::Unwrap<Magic>(args.This());
 
       if (!args[0]->IsString()) {
-        return ThrowException(Exception::TypeError(
-            String::New("First argument must be a string")));
+        return NanThrowTypeError("First argument must be a string");
       }
       if (!args[1]->IsFunction()) {
-        return ThrowException(Exception::TypeError(
-            String::New("Second argument must be a callback function")));
+        return NanThrowTypeError("Second argument must be a callback function");
       }
 
       Local<Function> callback = Local<Function>::Cast(args[1]);
 
       String::Utf8Value str(args[0]->ToString());
 
-      Baton* baton = new Baton();
-      baton->error = false;
-      baton->free_error = true;
-      baton->error_message = NULL;
-      baton->request.data = baton;
-      baton->callback = Persistent<Function>::New(callback);
-      baton->data = strdup((const char*)*str);
-      baton->dataIsPath = true;
-      baton->path = obj->mpath;
-      baton->flags = obj->mflags;
-      baton->result = NULL;
+      NanAsyncQueueWorker(new DetectWorker(new NanCallback(callback),
+          (const char*)*str, obj->mpath, obj->mflags));
 
-      int status = uv_queue_work(uv_default_loop(),
-                                 &baton->request,
-                                 Magic::DetectWork,
-                                 (uv_after_work_cb)Magic::DetectAfter);
-      assert(status == 0);
-
-      return Undefined();
+      NanReturnUndefined();
     }
 
-    static Handle<Value> Detect(const Arguments& args) {
-      HandleScope scope;
+    static NAN_METHOD(Detect) {
+      NanScope();
       Magic* obj = ObjectWrap::Unwrap<Magic>(args.This());
 
       if (args.Length() < 2) {
-        return ThrowException(Exception::TypeError(
-            String::New("Expecting 2 arguments")));
+        return NanThrowTypeError("Expecting 2 arguments");
       }
       if (!Buffer::HasInstance(args[0])) {
-        return ThrowException(Exception::TypeError(
-            String::New("First argument must be a Buffer")));
+        return NanThrowTypeError("First argument must be a Buffer");
       }
       if (!args[1]->IsFunction()) {
-        return ThrowException(Exception::TypeError(
-            String::New("Second argument must be a callback function")));
+        return NanThrowTypeError("Second argument must be a callback function");
       }
 
       Local<Function> callback = Local<Function>::Cast(args[1]);
@@ -167,140 +225,15 @@ class Magic : public ObjectWrap {
 #else
       Local<Value> buffer_obj = args[0];
 #endif
+      NanAsyncQueueWorker(new DetectWorker(new NanCallback(callback),
+          Buffer::Data(buffer_obj), Buffer::Length(buffer_obj),
+          obj->mpath, obj->mflags));
 
-      Baton* baton = new Baton();
-      baton->error = false;
-      baton->free_error = true;
-      baton->error_message = NULL;
-      baton->request.data = baton;
-      baton->callback = Persistent<Function>::New(callback);
-      baton->data = Buffer::Data(buffer_obj);
-      baton->dataLen = Buffer::Length(buffer_obj);
-      baton->dataIsPath = false;
-      baton->path = obj->mpath;
-      baton->flags = obj->mflags;
-      baton->result = NULL;
-
-      int status = uv_queue_work(uv_default_loop(),
-                                 &baton->request,
-                                 Magic::DetectWork,
-                                 (uv_after_work_cb)Magic::DetectAfter);
-      assert(status == 0);
-
-      return Undefined();
+      NanReturnUndefined();
     }
 
-    static void DetectWork(uv_work_t* req) {
-      Baton* baton = static_cast<Baton*>(req->data);
-      const char* result;
-      struct magic_set *magic = magic_open(baton->flags
-                                           | MAGIC_NO_CHECK_COMPRESS
-                                           | MAGIC_ERROR);
-
-      if (magic == NULL) {
-        baton->error_message = strdup(uv_strerror(
-                                        uv_last_error(uv_default_loop())));
-      } else if (magic_load(magic, baton->path) == -1
-                 && magic_load(magic, fallbackPath) == -1) {
-        baton->error_message = strdup(magic_error(magic));
-        magic_close(magic);
-        magic = NULL;
-      }
-
-      if (magic == NULL) {
-        if (baton->error_message)
-          baton->error = true;
-        return;
-      }
-
-      if (baton->dataIsPath) {
-#ifdef _WIN32
-        // open the file manually to help cope with potential unicode characters
-        // in filename
-        const char* ofn = baton->data;
-        int flags = O_RDONLY|O_BINARY;
-        int fd = -1;
-        int wLen;
-        wLen = MultiByteToWideChar(CP_UTF8, 0, ofn, -1, NULL, 0);
-        if (wLen > 0) {
-          wchar_t* wfn = (wchar_t*)malloc(wLen * sizeof(wchar_t));
-          if (wfn) {
-            int wret = MultiByteToWideChar(CP_UTF8, 0, ofn, -1, wfn, wLen);
-            if (wret != 0)
-              fd = _wopen(wfn, flags);
-            free(wfn);
-            wfn = NULL;
-          }
-        }
-        if (fd == -1) {
-          baton->error = true;
-          baton->free_error = false;
-          baton->error_message = "Error while opening file";
-          magic_close(magic);
-          return;
-        }
-        result = magic_descriptor(magic, fd);
-        _close(fd);
-#else
-        result = magic_file(magic, baton->data);
-#endif
-      } else
-        result = magic_buffer(magic, (const void*)baton->data, baton->dataLen);
-
-      if (result == NULL) {
-        const char* error = magic_error(magic);
-        if (error) {
-          baton->error = true;
-          baton->error_message = strdup(error);
-        }
-      } else
-        baton->result = strdup(result);
-
-      magic_close(magic);
-    }
-
-    static void DetectAfter(uv_work_t* req) {
-      HandleScope scope;
-      Baton* baton = static_cast<Baton*>(req->data);
-
-      if (baton->error) {
-        Local<Value> err = Exception::Error(String::New(baton->error_message));
-        if (baton->free_error)
-          free(baton->error_message);
-
-        const unsigned argc = 1;
-        Local<Value> argv[argc] = { err };
-
-        TryCatch try_catch;
-        baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
-        if (try_catch.HasCaught())
-          FatalException(try_catch);
-      } else {
-        const unsigned argc = 2;
-        Local<Value> argv[argc] = {
-          Local<Value>::New(Null()),
-          Local<Value>::New(baton->result
-                            ? String::New(baton->result)
-                            : String::Empty())
-        };
-
-        if (baton->result)
-          free((void*)baton->result);
-
-        TryCatch try_catch;
-        baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
-        if (try_catch.HasCaught())
-          FatalException(try_catch);
-      }
-
-      if (baton->dataIsPath)
-        free(baton->data);
-      baton->callback.Dispose();
-      delete baton;
-    }
-
-    static Handle<Value> SetFallback(const Arguments& args) {
-      HandleScope scope;
+    static NAN_METHOD(SetFallback) {
+      NanScope();
 
       if (fallbackPath)
         free((void*)fallbackPath);
@@ -312,31 +245,32 @@ class Magic : public ObjectWrap {
       } else
         fallbackPath = NULL;
 
-      return Undefined();
+      NanReturnUndefined();
     }
 
     static void Initialize(Handle<Object> target) {
-      HandleScope scope;
+      NanScope();
 
-      Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
-      Local<String> name = String::NewSymbol("Magic");
+      Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
+      Local<String> name = NanNew("Magic");
 
-      constructor = Persistent<FunctionTemplate>::New(tpl);
-      constructor->InstanceTemplate()->SetInternalFieldCount(1);
-      constructor->SetClassName(name);
+      tpl->InstanceTemplate()->SetInternalFieldCount(1);
+      tpl->SetClassName(name);
 
-      NODE_SET_PROTOTYPE_METHOD(constructor, "detectFile", DetectFile);
-      NODE_SET_PROTOTYPE_METHOD(constructor, "detect", Detect);
-      target->Set(String::NewSymbol("setFallback"),
-        FunctionTemplate::New(SetFallback)->GetFunction());
+      NODE_SET_PROTOTYPE_METHOD(tpl, "detectFile", DetectFile);
+      NODE_SET_PROTOTYPE_METHOD(tpl, "detect", Detect);
+      target->Set(NanNew<String>("setFallback"),
+        NanNew<FunctionTemplate>(SetFallback)->GetFunction());
 
-      target->Set(name, constructor->GetFunction());
+      target->Set(name, tpl->GetFunction());
+
+      NanAssignPersistent(constructor, tpl);
     }
 };
 
 extern "C" {
   void init(Handle<Object> target) {
-    HandleScope scope;
+    NanScope();
     Magic::Initialize(target);
   }
 

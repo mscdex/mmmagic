@@ -1,5 +1,5 @@
 { "name": "mmmagic",
-  "version": "0.3.12",
+  "version": "0.3.12+nan.2",
   "author": "Brian White <mscdex@mscdex.net>",
   "description": "An async libmagic binding for node.js for detecting content types by data inspection",
   "main": "./index",
@@ -7,5 +7,6 @@
   "engines": { "node": ">=0.6.0" },
   "keywords": [ "magic", "libmagic", "file", "filetype", "mime", "mimetype" ],
   "licenses": [ { "type": "MIT", "url": "http://github.com/mscdex/mmmagic/raw/master/LICENSE" } ],
-  "repository" : { "type": "git", "url": "http://github.com/mscdex/mmmagic.git" }
+  "repository" : { "type": "git", "url": "http://github.com/mscdex/mmmagic.git" },
+  "dependencies": { "nan": "~1.4.1" }
 }
