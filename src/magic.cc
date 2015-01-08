@@ -186,6 +186,9 @@ class Magic : public ObjectWrap {
         baton->error_message = strdup(uv_strerror(
                                         uv_last_error(uv_default_loop())));
 #else
+// XXX libuv 1.x currently has no public cross-platform function to convert an
+//     OS-specific error number to a libuv error number. `-errno` should work
+//     for *nix, but just passing GetLastError() on Windows will not work ...
 # ifdef _MSC_VER
         baton->error_message = strdup(uv_strerror(GetLastError()));
 # else
