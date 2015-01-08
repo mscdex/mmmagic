@@ -189,7 +189,7 @@ class Magic : public ObjectWrap {
 # ifdef _MSC_VER
         baton->error_message = strdup(uv_strerror(GetLastError()));
 # else
-        baton->error_message = strdup(uv_strerror(errno));
+        baton->error_message = strdup(uv_strerror(-errno));
 # endif
 #endif
       } else if (magic_load(magic, baton->path) == -1
