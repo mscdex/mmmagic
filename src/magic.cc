@@ -271,7 +271,7 @@ class Magic : public ObjectWrap {
           NanNull(),
           Local<Value>(baton->result
                        ? NanNew<String>(baton->result)
-                       : NanNew<String>())
+                       : NanNew<String>(""))
         };
 
         if (baton->result)
