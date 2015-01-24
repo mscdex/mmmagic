@@ -314,7 +314,7 @@ class Magic : public ObjectWrap {
       NODE_SET_PROTOTYPE_METHOD(tpl, "detectFile", DetectFile);
       NODE_SET_PROTOTYPE_METHOD(tpl, "detect", Detect);
       target->Set(NanNew<String>("setFallback"),
-        NanNew<FunctionTemplate>(SetFallback)->GetFunction());
+                  NanNew<FunctionTemplate>(SetFallback)->GetFunction());
 
       target->Set(NanNew<String>("Magic"), tpl->GetFunction());
     }
