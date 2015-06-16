@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: apprentice.c,v 1.229 2015/01/01 17:07:34 christos Exp $")
+FILE_RCSID("@(#)$File: apprentice.c,v 1.233 2015/06/10 00:57:41 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -152,6 +152,7 @@ private int get_op(char);
 private int parse_mime(struct magic_set *, struct magic_entry *, const char *);
 private int parse_strength(struct magic_set *, struct magic_entry *, const char *);
 private int parse_apple(struct magic_set *, struct magic_entry *, const char *);
+private int parse_ext(struct magic_set *, struct magic_entry *, const char *);
 
 
 private size_t magicsize = sizeof(struct magic);
@@ -166,6 +167,7 @@ private struct {
 #define	DECLARE_FIELD(name) { # name, sizeof(# name) - 1, parse_ ## name }
 	DECLARE_FIELD(mime),
 	DECLARE_FIELD(apple),
+	DECLARE_FIELD(ext),
 	DECLARE_FIELD(strength),
 #undef	DECLARE_FIELD
 	{ NULL, 0, NULL }
@@ -968,8 +970,9 @@ apprentice_list(struct mlist *mlist, int mode)
 			       *ml->magic[magindex].mimetype == '\0')
 				magindex++;
 
-			printf("Strength = %3" SIZE_T_FORMAT "u : %s [%s]\n",
+			printf("Strength = %3" SIZE_T_FORMAT "u@%u: %s [%s]\n",
 			    apprentice_magic_strength(m),
+			    ml->magic[magindex].lineno,
 			    ml->magic[magindex].desc,
 			    ml->magic[magindex].mimetype);
 		}
@@ -1282,6 +1285,7 @@ apprentice_load(struct magic_set *ms, const char *fn, int action)
 
 	memset(mset, 0, sizeof(mset));
   // XXX: change by mscdex
+	//ms->flags |= MAGIC_CHECK;	/* Enable checks for parsed files */
 
 
 	if ((map = CAST(struct magic_map *, calloc(1, sizeof(*map)))) == NULL)
@@ -1843,15 +1847,19 @@ parse(struct magic_set *ms, struct magic_entry *me, const char *line,
 		}
 	}
 	/* Indirect offsets are not valid at level 0. */
-	if (m->cont_level == 0 && (m->flag & (OFFADD | INDIROFFADD)))
+	if (m->cont_level == 0 && (m->flag & (OFFADD | INDIROFFADD))) {
 		if (ms->flags & MAGIC_CHECK)
 			file_magwarn(ms, "relative offset at level 0");
+		return -1;
+	}
 
 	/* get offset, then skip over it */
 	m->offset = (uint32_t)strtoul(l, &t, 0);
-        if (l == t)
+        if (l == t) {
 		if (ms->flags & MAGIC_CHECK)
 			file_magwarn(ms, "offset `%s' invalid", l);
+		return -1;
+	}
         l = t;
 
 	if (m->flag & INDIR) {
@@ -1907,7 +1915,7 @@ parse(struct magic_set *ms, struct magic_entry *me, const char *line,
 					file_magwarn(ms,
 					    "indirect offset type `%c' invalid",
 					    *l);
-				break;
+				return -1;
 			}
 			l++;
 		}
@@ -1927,17 +1935,21 @@ parse(struct magic_set *ms, struct magic_entry *me, const char *line,
 		}
 		if (isdigit((unsigned char)*l) || *l == '-') {
 			m->in_offset = (int32_t)strtol(l, &t, 0);
-			if (l == t)
+			if (l == t) {
 				if (ms->flags & MAGIC_CHECK)
 					file_magwarn(ms,
 					    "in_offset `%s' invalid", l);
+				return -1;
+			}
 			l = t;
 		}
 		if (*l++ != ')' || 
-		    ((m->in_op & FILE_OPINDIRECT) && *l++ != ')'))
+		    ((m->in_op & FILE_OPINDIRECT) && *l++ != ')')) {
 			if (ms->flags & MAGIC_CHECK)
 				file_magwarn(ms,
 				    "missing ')' in indirect offset");
+			return -1;
+		}
 	}
 	EATAB;
 
@@ -2203,7 +2215,7 @@ parse_extra(struct magic_set *ms, struct magic_entry *me, const char *line,
 	size_t i;
 	const char *l = line;
 	struct magic *m = &me->mp[me->cont_count == 0 ? 0 : me->cont_count - 1];
-	char *buf = (char *)m + off;
+	char *buf = CAST(char *, CAST(void *, m)) + off;
 
 	if (buf[0] != '\0') {
 		len = nt ? strlen(buf) : len;
@@ -2252,8 +2264,22 @@ parse_apple(struct magic_set *ms, struct magic_entry *me, const char *line)
 {
 	struct magic *m = &me->mp[0];
 
-	return parse_extra(ms, me, line, offsetof(struct magic, apple),
+	return parse_extra(ms, me, line,
+	    CAST(off_t, offsetof(struct magic, apple)),
 	    sizeof(m->apple), "APPLE", "!+-./", 0);
+}
+
+/*
+ * Parse a comma-separated list of extensions
+ */
+private int
+parse_ext(struct magic_set *ms, struct magic_entry *me, const char *line)
+{
+	struct magic *m = &me->mp[0];
+
+	return parse_extra(ms, me, line,
+	    CAST(off_t, offsetof(struct magic, ext)),
+	    sizeof(m->ext), "EXTENSION", ",!+-/", 0);
 }
 
 /*
@@ -2265,7 +2291,8 @@ parse_mime(struct magic_set *ms, struct magic_entry *me, const char *line)
 {
 	struct magic *m = &me->mp[0];
 
-	return parse_extra(ms, me, line, offsetof(struct magic, mimetype),
+	return parse_extra(ms, me, line,
+	    CAST(off_t, offsetof(struct magic, mimetype)),
 	    sizeof(m->mimetype), "MIME", "+-/.", 1);
 }
 

@@ -7,7 +7,7 @@
       'dependencies': [
         'pcre/pcre.gyp:libpcre',
       ],
-      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.19"' ],
+      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.23"' ],
       'conditions': [
         [ 'OS!="freebsd" and OS!="mac"', {
           'sources': [ 'src/fmtcheck.c' ],
@@ -18,6 +18,8 @@
             'src/asprintf.c',
             'src/ctime_r.c',
             'src/getline.c',
+            'src/gmtime_r.c',
+            'src/localtime_r.c',
             'src/pread.c',
             'src/strcasestr.c',
             'src/strlcat.c',
@@ -25,9 +27,11 @@
             'src/vasprintf.c',
           ],
           'include_dirs': [ 'msvc', 'config/win' ],
-          'libraries': [
-            'shlwapi.lib'
-          ],
+          'link_settings': {
+            'libraries': [
+              '-lshlwapi.lib',
+            ]
+          },
         }],
         [ 'OS=="linux"', {
           'sources': [

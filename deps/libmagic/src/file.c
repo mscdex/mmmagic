@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: file.c,v 1.160 2014/12/16 23:18:40 christos Exp $")
+FILE_RCSID("@(#)$File: file.c,v 1.164 2015/06/03 18:21:24 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -75,14 +75,14 @@ int getopt_long(int argc, char * const *argv, const char *optstring, const struc
 #endif
 
 #ifdef S_IFLNK
-#define FILE_FLAGS "-bcEhikLlNnprsvz0"
+#define FILE_FLAGS "-bcEhikLlNnprsvzZ0"
 #else
-#define FILE_FLAGS "-bcEiklNnprsvz0"
+#define FILE_FLAGS "-bcEiklNnprsvzZ0"
 #endif
 
 # define USAGE  \
     "Usage: %s [" FILE_FLAGS \
-	"] [--apple] [--mime-encoding] [--mime-type]\n" \
+	"] [--apple] [--extension] [--mime-encoding] [--mime-type]\n" \
     "            [-e testname] [-F separator] [-f namefile] [-m magicfiles] " \
     "file ...\n" \
     "       %s -C [-m magicfiles]\n" \
@@ -105,7 +105,7 @@ private const struct option long_options[] = {
 #undef OPT_LONGONLY
     {0, 0, NULL, 0}
 };
-#define OPTSTRING	"bcCde:Ef:F:hiklLm:nNpP:rsvz0"
+#define OPTSTRING	"bcCde:Ef:F:hiklLm:nNpP:rsvzZ0"
 
 private const struct {
 	const char *name;
@@ -137,8 +137,14 @@ private struct {
 
 private char *progname;		/* used throughout 		*/
 
+#ifdef __dead
+__dead
+#endif
 private void usage(void);
 private void docprint(const char *);
+#ifdef __dead
+__dead
+#endif
 private void help(void);
 
 private int unwrap(struct magic_set *, const char *);
@@ -192,9 +198,12 @@ main(int argc, char *argv[])
 				flags |= MAGIC_APPLE;
 				break;
 			case 11:
-				flags |= MAGIC_MIME_TYPE;
+				flags |= MAGIC_EXTENSION;
 				break;
 			case 12:
+				flags |= MAGIC_MIME_TYPE;
+				break;
+			case 13:
 				flags |= MAGIC_MIME_ENCODING;
 				break;
 			}
@@ -269,7 +278,6 @@ main(int argc, char *argv[])
 		case 'r':
 			flags |= MAGIC_RAW;
 			break;
-			break;
 		case 's':
 			flags |= MAGIC_DEVICES;
 			break;
@@ -282,6 +290,10 @@ main(int argc, char *argv[])
 			return 0;
 		case 'z':
 			flags |= MAGIC_COMPRESS;
+			break;
+
+		case 'Z':
+			flags |= MAGIC_COMPRESS|MAGIC_COMPRESS_TRANSP;
 			break;
 #ifdef S_IFLNK
 		case 'L':
