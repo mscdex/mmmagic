@@ -4,15 +4,18 @@ Description
 
 An async libmagic binding for [node.js](http://nodejs.org/) for detecting content types by data inspection.
 
+[![Build Status](https://travis-ci.org/mscdex/mmmagic.svg?branch=master)](https://travis-ci.org/mscdex/mmmagic)
+[![Build status](https://ci.appveyor.com/api/projects/status/mva462lka1ap5a3t)](https://ci.appveyor.com/project/mscdex/mmmagic)
+
 
 Requirements
 ============
 
-* [node.js](http://nodejs.org/) -- v0.6.0 or newer
+* [node.js](http://nodejs.org/) -- v0.8.0 or newer
 
 
 Install
-============
+=======
 
     npm install mmmagic
 
