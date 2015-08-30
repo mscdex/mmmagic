@@ -3,7 +3,7 @@
     {
       'target_name': 'magic',
       'sources': [
-        'src/magic.cc',
+        'src/binding.cc',
       ],
       'include_dirs': [
         'deps/libmagic/src',

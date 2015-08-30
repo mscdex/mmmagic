@@ -10,7 +10,7 @@ var t = -1,
 var tests = [
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
-      magic.detectFile(path.join(__dirname, '..', 'src', 'magic.cc'),
+      magic.detectFile(path.join(__dirname, '..', 'src', 'binding.cc'),
                        function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(result, 'text/x-c++');
@@ -21,7 +21,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_ENCODING);
-      magic.detectFile(path.join(__dirname, '..', 'src', 'magic.cc'),
+      magic.detectFile(path.join(__dirname, '..', 'src', 'binding.cc'),
                        function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(result, 'us-ascii');
@@ -32,7 +32,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME);
-      magic.detectFile(path.join(__dirname, '..', 'src', 'magic.cc'),
+      magic.detectFile(path.join(__dirname, '..', 'src', 'binding.cc'),
                        function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(result, 'text/x-c++; charset=us-ascii');
@@ -43,7 +43,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic();
-      magic.detectFile(path.join(__dirname, '..', 'src', 'magic.cc'),
+      magic.detectFile(path.join(__dirname, '..', 'src', 'binding.cc'),
                        function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(/^C\+\+ source, ASCII text/.test(result), true);
@@ -54,7 +54,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE | mmm.MAGIC_CONTINUE);
-      magic.detectFile(path.join(__dirname, '..', 'src', 'magic.cc'),
+      magic.detectFile(path.join(__dirname, '..', 'src', 'binding.cc'),
                        function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(Array.isArray(result), true);
@@ -86,7 +86,7 @@ var tests = [
     what: 'detectFile - UTF-8 filename'
   },
   { run: function() {
-      var buf = fs.readFileSync(path.join(__dirname, '..', 'src', 'magic.cc'));
+      var buf = fs.readFileSync(path.join(__dirname, '..', 'src', 'binding.cc'));
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
       magic.detect(buf, function(err, result) {
         assert.strictEqual(err, null);
