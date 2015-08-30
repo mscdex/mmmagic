@@ -50,6 +50,12 @@ class Magic : public ObjectWrap {
           path = NULL;
       }
       mpath = (path == NULL ? strdup(fallbackPath) : path);
+
+      // When returning multiple matches, MAGIC_RAW needs to be set so that we
+      // can more easily parse the output into an array for the end user
+      if (flags & MAGIC_CONTINUE)
+        flags |= MAGIC_RAW;
+
       mflags = flags;
     }
     ~Magic() {
@@ -267,12 +273,46 @@ class Magic : public ObjectWrap {
         Local<Value> argv[1] = { err };
         baton->callback->Call(1, argv);
       } else {
-        Local<Value> argv[2] = {
-          Nan::Null(),
-          Local<Value>(baton->result
-                       ? Nan::New<String>(baton->result).ToLocalChecked()
-                       : Nan::New<String>().ToLocalChecked())
-        };
+        Local<Value> argv[2];
+        int multi_result_flags = (baton->flags & (MAGIC_CONTINUE | MAGIC_RAW));
+
+        argv[0] = Nan::Null();
+
+        if (multi_result_flags == (MAGIC_CONTINUE | MAGIC_RAW)) {
+          Local<Array> results = Nan::New<Array>();
+          if (baton->result) {
+            uint32_t i = 0;
+            const char* result_end = baton->result + strlen(baton->result);
+            const char* last_match = baton->result;
+            const char* cur_match;
+            while (true) {
+              if (!(cur_match = strstr(last_match, "\n- "))) {
+                // Append remainder string
+                if (last_match < result_end)
+                  Nan::Set(static_cast<Local<Object>>(results),
+                           i,
+                           Nan::New<String>(last_match).ToLocalChecked());
+                break;
+              }
+
+              size_t match_len = (cur_match - last_match);
+              char* match = new char(match_len + 1);
+              strncpy(match, last_match, match_len);
+              match[match_len] = '\0';
+
+              Nan::Set(static_cast<Local<Object>>(results),
+                       i++,
+                       Nan::New<String>(match).ToLocalChecked());
+
+              delete[] match;
+              last_match = cur_match + 3;
+            }
+          }
+          argv[1] = Local<Value>(results);
+        } else if (baton->result)
+          argv[1] = Local<Value>(Nan::New<String>(baton->result).ToLocalChecked());
+        else 
+          argv[1] = Local<Value>(Nan::New<String>().ToLocalChecked());
 
         if (baton->result)
           free((void*)baton->result);
