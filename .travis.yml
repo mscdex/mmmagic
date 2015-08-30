@@ -1,0 +1,34 @@
+sudo: false
+language: node_js
+env:
+  - PKG_CONFIG_PATH=$HOME/libck/lib/pkgconfig CXX=g++-4.8
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+
+    packages:
+    - build-essential
+    - g++-4.8
+
+node_js:
+  - "0.8"
+  - "0.10"
+  - "0.12"
+  - "iojs-1"
+  - "iojs-2"
+  - "iojs-3"
+
+before_install:
+  - $CXX --version
+  - npm install npm
+  - mv node_modules npm
+  - npm/.bin/npm --version  
+  - npm/.bin/npm install -g node-gyp-install
+  - node-gyp-install
+  - echo $PKG_CONFIG_PATH
+  - ls `which node`
+
+install:
+  - npm/.bin/npm install
