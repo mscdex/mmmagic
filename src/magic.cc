@@ -288,19 +288,20 @@ class Magic : public ObjectWrap {
             while (true) {
               if (!(cur_match = strstr(last_match, "\n- "))) {
                 // Append remainder string
-                if (last_match < result_end)
-                  Nan::Set(static_cast<Local<Object>>(results),
+                if (last_match < result_end) {
+                  Nan::Set(Local<Object>::Cast(results),
                            i,
                            Nan::New<String>(last_match).ToLocalChecked());
+                }
                 break;
               }
 
               size_t match_len = (cur_match - last_match);
-              char* match = new char(match_len + 1);
+              char* match = new char[match_len + 1];
               strncpy(match, last_match, match_len);
               match[match_len] = '\0';
 
-              Nan::Set(static_cast<Local<Object>>(results),
+              Nan::Set(Local<Object>::Cast(results),
                        i++,
                        Nan::New<String>(match).ToLocalChecked());
 
