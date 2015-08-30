@@ -67,6 +67,8 @@ typedef unsigned int mode_t;
 # endif
 # define strtoull _strtoui64
 # define STDIN_FILENO 0
+#else
+# include <unistd.h>
 #endif
 
 #ifdef WIN32
