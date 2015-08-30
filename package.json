@@ -2,7 +2,7 @@
   "version": "0.3.16",
   "author": "Brian White <mscdex@mscdex.net>",
   "description": "An async libmagic binding for node.js for detecting content types by data inspection",
-  "main": "./index",
+  "main": "./lib/index",
   "dependencies": {
     "nan": "^2.0.8"
   },
