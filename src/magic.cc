@@ -62,9 +62,9 @@ class Magic : public ObjectWrap {
     static void New(const Nan::FunctionCallbackInfo<v8::Value>& args) {
       Nan::HandleScope();
 #ifndef _WIN32
-      int mflags = MAGIC_SYMLINK;
+      int magic_flags = MAGIC_SYMLINK;
 #else
-      int mflags = MAGIC_NONE;
+      int magic_flags = MAGIC_NONE;
 #endif
       char* path = NULL;
       bool use_bundled = true;
@@ -74,7 +74,7 @@ class Magic : public ObjectWrap {
 
       if (args.Length() > 1) {
         if (args[1]->IsInt32())
-          mflags = args[1]->Int32Value();
+          magic_flags = args[1]->Int32Value();
         else
           return Nan::ThrowTypeError("Second argument must be an integer");
       }
@@ -85,7 +85,7 @@ class Magic : public ObjectWrap {
           String::Utf8Value str(args[0]->ToString());
           path = strdup((const char*)(*str));
         } else if (args[0]->IsInt32())
-          mflags = args[0]->Int32Value();
+          magic_flags = args[0]->Int32Value();
         else if (args[0]->IsBoolean() && !args[0]->BooleanValue()) {
           use_bundled = false;
           path = strdup(magic_getpath(NULL, 0/*FILE_LOAD*/));
@@ -93,7 +93,7 @@ class Magic : public ObjectWrap {
           return Nan::ThrowTypeError("First argument must be a string or integer");
       }
 
-      Magic* obj = new Magic((use_bundled ? NULL : path), mflags);
+      Magic* obj = new Magic((use_bundled ? NULL : path), magic_flags);
       obj->Wrap(args.This());
       obj->Ref();
 
