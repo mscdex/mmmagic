@@ -222,7 +222,7 @@ class Magic : public ObjectWrap {
           if (wfn) {
             int wret = MultiByteToWideChar(CP_UTF8, 0, ofn, -1, wfn, wLen);
             if (wret != 0)
-              fd = _wopen(wfn, flags);
+              _wsopen_s(&fd, wfn, flags, _SH_DENYNO, _S_IREAD);
             free(wfn);
             wfn = NULL;
           }
