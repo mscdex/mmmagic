@@ -358,7 +358,6 @@ typedef long int64_t;
 #endif
 #endif
 
-#define snprintf _snprintf
 #include <crtdefs.h>
 
 /* Define as `fork' if `vfork' does not work. */

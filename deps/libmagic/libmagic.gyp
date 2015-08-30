@@ -21,6 +21,7 @@
             'src/gmtime_r.c',
             'src/localtime_r.c',
             'src/pread.c',
+            'src/snprintf.c',
             'src/strcasestr.c',
             'src/strlcat.c',
             'src/strlcpy.c',
