@@ -2,13 +2,15 @@ os:
   - linux
   - osx
 sudo: false
-language: node_js
+language: cpp
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     packages:
     - g++-4.8
+notifications:
+  email: false
 env:
   matrix:
   - TRAVIS_NODE_VERSION="0.10"
