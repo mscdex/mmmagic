@@ -89,7 +89,7 @@ Magic methods
     * **MAGIC\_SYMLINK** - Follow symlinks **(default for non-Windows)**
     * **MAGIC\_DEVICES** - Look at the contents of devices
     * **MAGIC\_MIME_TYPE** - Return the MIME type
-    * **MAGIC\_CONTINUE** - Return all matches
+    * **MAGIC\_CONTINUE** - Return all matches (returned as an array of strings)
     * **MAGIC\_CHECK** - Print warnings to stderr
     * **MAGIC\_PRESERVE\_ATIME** - Restore access time on exit
     * **MAGIC\_RAW** - Don't translate unprintable chars
