@@ -10,7 +10,7 @@
     "install": "node-gyp rebuild",
     "test": "node test/test.js"
   },
-  "engines": { "node": ">=0.8.0" },
+  "engines": { "node": ">=0.10.0" },
   "keywords": [ "magic", "libmagic", "file", "filetype", "mime", "mimetype" ],
   "licenses": [ { "type": "MIT", "url": "http://github.com/mscdex/mmmagic/raw/master/LICENSE" } ],
   "repository" : { "type": "git", "url": "http://github.com/mscdex/mmmagic.git" }
