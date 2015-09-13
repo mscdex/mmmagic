@@ -3,18 +3,17 @@
 # Test against these versions of Io.js and Node.js.
 environment:
   matrix:
-  # node.js
     - nodejs_version: "0.10"
     - nodejs_version: "0.12"
-  # io.js
     - nodejs_version: "1"
     - nodejs_version: "2"
     - nodejs_version: "3"
+    - nodejs_version: "4"
 
 # Install scripts. (runs after repo cloning)
 install:
   # Get the latest stable version of Node/io.js
-  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version)
+  - ps: Install-Product node $env:nodejs_version
   # Fix iojs alias
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/fix-iojs-node-alias.ps1'))
   # Typical npm stuff.

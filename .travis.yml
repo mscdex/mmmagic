@@ -18,6 +18,7 @@ env:
   - TRAVIS_NODE_VERSION="iojs-1"
   - TRAVIS_NODE_VERSION="iojs-2"
   - TRAVIS_NODE_VERSION="iojs-3"
+  - TRAVIS_NODE_VERSION="4"
 install:
   - rm -rf ~/.nvm && git clone https://github.com/creationix/nvm.git ~/.nvm && source ~/.nvm/nvm.sh && nvm install $TRAVIS_NODE_VERSION
   - npm --version
