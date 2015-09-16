@@ -1,11 +1,13 @@
 var mmm = require('../lib/index');
 
-var path = require('path'),
-    assert = require('assert'),
-    fs = require('fs');
+var path = require('path');
+var assert = require('assert');
+var fs = require('fs');
+var format = require('util').format;
 
-var t = -1,
-    group = path.basename(__filename, '.js') + '/';
+var t = -1;
+var group = path.basename(__filename, '.js') + '/';
+var timeout;
 
 var tests = [
   { run: function() {
@@ -99,14 +101,24 @@ var tests = [
 ];
 
 function next() {
+  clearTimeout(timeout);
+  if (t > -1)
+    console.log('Finished  %j', tests[t].what)
   if (t === tests.length - 1)
     return;
   var v = tests[++t];
+  timeout = setTimeout(function() {
+    throw new Error(format('Test case %j timed out', v.what));
+  }, 10 * 1000);
+  console.log('Executing %j', v.what);
   v.run.call(v);
 }
 
-function makeMsg(msg, what) {
-  return '[' + group + (what || tests[t].what) + ']: ' + msg;
+function makeMsg(msg) {
+  var fmtargs = ['[%s]: ' + msg, tests[t].what];
+  for (var i = 1; i < arguments.length; ++i)
+    fmtargs.push(arguments[i]);
+  return format.apply(null, fmtargs);
 }
 
 process.once('uncaughtException', function(err) {
@@ -116,8 +128,7 @@ process.once('uncaughtException', function(err) {
   throw err;
 }).once('exit', function() {
   assert(t === tests.length - 1,
-         makeMsg('Only finished ' + (t + 1) + '/' + tests.length + ' tests',
-                 '_exit'));
+         makeMsg('Only finished %d/%d tests', (t + 1), tests.length));
 });
 
 next();
