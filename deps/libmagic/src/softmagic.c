@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: softmagic.c,v 1.218 2015/09/11 17:24:09 christos Exp $")
+FILE_RCSID("@(#)$File: softmagic.c,v 1.221 2015/09/16 22:37:05 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -57,10 +57,10 @@ private int mcopy(struct magic_set *, union VALUETYPE *, int, int,
 private int mconvert(struct magic_set *, struct magic *, int);
 private int print_sep(struct magic_set *, int);
 private int handle_annotation(struct magic_set *, struct magic *);
-private void cvt_8(union VALUETYPE *, const struct magic *);
-private void cvt_16(union VALUETYPE *, const struct magic *);
-private void cvt_32(union VALUETYPE *, const struct magic *);
-private void cvt_64(union VALUETYPE *, const struct magic *);
+private int cvt_8(union VALUETYPE *, const struct magic *);
+private int cvt_16(union VALUETYPE *, const struct magic *);
+private int cvt_32(union VALUETYPE *, const struct magic *);
+private int cvt_64(union VALUETYPE *, const struct magic *);
 
 #define OFFSET_OOB(n, o, i)	((n) < (o) || (i) > ((n) - (o)))
 #define BE64(p) (((uint64_t)(p)->hq[0]<<56)|((uint64_t)(p)->hq[1]<<48)| \
@@ -234,6 +234,7 @@ match(struct magic_set *ms, struct magic *magic, uint32_t nmagic,
 			*returnval = 1;
 			return e;
 		}
+
 		/*
 		 * If we are going to print something, we'll need to print
 		 * a blank before we print something else.
@@ -318,6 +319,7 @@ match(struct magic_set *ms, struct magic *magic, uint32_t nmagic,
 						break;
 				} else
 					ms->c.li[cont_level].got_match = 1;
+
 				if ((e = handle_annotation(ms, m)) != 0) {
 					*need_separator = 1;
 					*printed_something = 1;
@@ -858,37 +860,45 @@ cvt_flip(int type, int flip)
 			p->fld *= cast m->num_mask; \
 			break; \
 		case FILE_OPDIVIDE: \
+			if (cast m->num_mask == 0) \
+				return -1; \
 			p->fld /= cast m->num_mask; \
 			break; \
 		case FILE_OPMODULO: \
+			if (cast m->num_mask == 0) \
+				return -1; \
 			p->fld %= cast m->num_mask; \
 			break; \
 		} \
 	if (m->mask_op & FILE_OPINVERSE) \
 		p->fld = ~p->fld \
 
-private void
+private int
 cvt_8(union VALUETYPE *p, const struct magic *m)
 {
 	DO_CVT(b, (uint8_t));
+	return 0;
 }
 
-private void
+private int
 cvt_16(union VALUETYPE *p, const struct magic *m)
 {
 	DO_CVT(h, (uint16_t));
+	return 0;
 }
 
-private void
+private int
 cvt_32(union VALUETYPE *p, const struct magic *m)
 {
 	DO_CVT(l, (uint32_t));
+	return 0;
 }
 
-private void
+private int
 cvt_64(union VALUETYPE *p, const struct magic *m)
 {
 	DO_CVT(q, (uint64_t));
+	return 0;
 }
 
 #define DO_CVT2(fld, cast) \
@@ -904,20 +914,24 @@ cvt_64(union VALUETYPE *p, const struct magic *m)
 			p->fld *= cast m->num_mask; \
 			break; \
 		case FILE_OPDIVIDE: \
+			if (cast m->num_mask == 0) \
+				return -1; \
 			p->fld /= cast m->num_mask; \
 			break; \
 		} \
 
-private void
+private int
 cvt_float(union VALUETYPE *p, const struct magic *m)
 {
 	DO_CVT2(f, (float));
+	return 0;
 }
 
-private void
+private int
 cvt_double(union VALUETYPE *p, const struct magic *m)
 {
 	DO_CVT2(d, (double));
+	return 0;
 }
 
 /*
@@ -933,21 +947,25 @@ mconvert(struct magic_set *ms, struct magic *m, int flip)
 
 	switch (type = cvt_flip(m->type, flip)) {
 	case FILE_BYTE:
-		cvt_8(p, m);
+		if (cvt_8(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_SHORT:
-		cvt_16(p, m);
+		if (cvt_16(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_LONG:
 	case FILE_DATE:
 	case FILE_LDATE:
-		cvt_32(p, m);
+		if (cvt_32(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_QUAD:
 	case FILE_QDATE:
 	case FILE_QLDATE:
 	case FILE_QWDATE:
-		cvt_64(p, m);
+		if (cvt_64(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_STRING:
 	case FILE_BESTRING16:
@@ -979,65 +997,78 @@ mconvert(struct magic_set *ms, struct magic *m, int flip)
 	}
 	case FILE_BESHORT:
 		p->h = (short)BE16(p);
-		cvt_16(p, m);
+		if (cvt_16(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_BELONG:
 	case FILE_BEDATE:
 	case FILE_BELDATE:
 		p->l = (int32_t)BE32(p);
-		cvt_32(p, m);
+		if (cvt_32(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_BEQUAD:
 	case FILE_BEQDATE:
 	case FILE_BEQLDATE:
 	case FILE_BEQWDATE:
 		p->q = (uint64_t)BE64(p);
-		cvt_64(p, m);
+		if (cvt_64(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_LESHORT:
 		p->h = (short)LE16(p);
-		cvt_16(p, m);
+		if (cvt_16(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_LELONG:
 	case FILE_LEDATE:
 	case FILE_LELDATE:
 		p->l = (int32_t)LE32(p);
-		cvt_32(p, m);
+		if (cvt_32(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_LEQUAD:
 	case FILE_LEQDATE:
 	case FILE_LEQLDATE:
 	case FILE_LEQWDATE:
 		p->q = (uint64_t)LE64(p);
-		cvt_64(p, m);
+		if (cvt_64(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_MELONG:
 	case FILE_MEDATE:
 	case FILE_MELDATE:
 		p->l = (int32_t)ME32(p);
-		cvt_32(p, m);
+		if (cvt_32(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_FLOAT:
-		cvt_float(p, m);
+		if (cvt_float(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_BEFLOAT:
 		p->l = BE32(p);
-		cvt_float(p, m);
+		if (cvt_float(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_LEFLOAT:
 		p->l = LE32(p);
-		cvt_float(p, m);
+		if (cvt_float(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_DOUBLE:
-		cvt_double(p, m);
+		if (cvt_double(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_BEDOUBLE:
 		p->q = BE64(p); 
-		cvt_double(p, m);
+		if (cvt_double(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_LEDOUBLE:
 		p->q = LE64(p);
-		cvt_double(p, m);
+		if (cvt_double(p, m) == -1)
+			goto out;
 		return 1;
 	case FILE_REGEX:
 	case FILE_SEARCH:
@@ -1050,6 +1081,9 @@ mconvert(struct magic_set *ms, struct magic *m, int flip)
 		file_magerror(ms, "invalid type %d in mconvert()", m->type);
 		return 0;
 	}
+out:
+	file_magerror(ms, "zerodivide in mconvert()");
+	return 0;
 }
 
 
@@ -1230,6 +1264,8 @@ mget(struct magic_set *ms, const unsigned char *s, struct magic *m,
 		if (m->in_op & FILE_OPINDIRECT) {
 			const union VALUETYPE *q = CAST(const union VALUETYPE *,
 			    ((const void *)(s + offset + off)));
+			if (OFFSET_OOB(nbytes, offset + off, sizeof(*q)))
+				return 0;
 			switch (cvt_flip(m->in_type, flip)) {
 			case FILE_BYTE:
 				off = q->b;
@@ -2126,12 +2162,12 @@ magiccheck(struct magic_set *ms, struct magic *m)
 private int
 handle_annotation(struct magic_set *ms, struct magic *m)
 {
-	if (ms->flags & MAGIC_APPLE) {
+	if ((ms->flags & MAGIC_APPLE) && m->apple[0]) {
 		if (file_printf(ms, "%.8s", m->apple) == -1)
 			return -1;
 		return 1;
 	}
-	if (ms->flags & MAGIC_EXTENSION) {
+	if ((ms->flags & MAGIC_EXTENSION) && m->ext[0]) {
 		if (file_printf(ms, "%s", m->ext) == -1)
 			return -1;
 		return 1;

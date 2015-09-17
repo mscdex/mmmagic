@@ -27,7 +27,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: funcs.c,v 1.84 2015/09/10 13:32:19 christos Exp $")
+FILE_RCSID("@(#)$File: funcs.c,v 1.85 2015/09/17 01:10:51 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -178,7 +178,6 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((__u
     const void *buf, size_t nb)
 {
 	int m = 0, rv = 0, looks_text = 0;
-	int mime = ms->flags & MAGIC_MIME;
 	const unsigned char *ubuf = CAST(const unsigned char *, buf);
 	unichar *u8buf = NULL;
 	size_t ulen;
@@ -293,9 +292,18 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((__u
 simple:
 	/* give up */
 	m = 1;
-	if ((!mime || (mime & MAGIC_MIME_TYPE)) &&
-	    file_printf(ms, "%s", mime ? type : def) == -1) {
-	    rv = -1;
+	if (ms->flags & MAGIC_MIME) {
+		if (file_printf(ms, "%s", type) == -1)
+			rv = -1;
+	} else if (ms->flags & MAGIC_APPLE) {
+		if (file_printf(ms, "UNKNUNKN") == -1)
+			rv = -1;
+	} else if (ms->flags & MAGIC_EXTENSION) {
+		if (file_printf(ms, "???") == -1)
+			rv = -1;
+	} else {
+		if (file_printf(ms, "%s", def) == -1)
+			rv = -1;
 	}
  done:
 	if ((ms->flags & MAGIC_MIME_ENCODING) != 0) {
