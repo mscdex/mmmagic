@@ -4,6 +4,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <iostream>
+#include <list>
+
 #ifdef _WIN32
 # include <io.h>
 # include <fcntl.h>
@@ -14,6 +17,10 @@
 
 using namespace node;
 using namespace v8;
+
+//#define SLOW_MAGIC 1
+
+class Magic;
 
 struct Baton {
   uv_work_t request;
@@ -32,6 +39,7 @@ struct Baton {
   char* error_message;
 
   const char* result;
+  Magic* obj;
 };
 
 static Nan::Persistent<Function> constructor;
@@ -41,8 +49,12 @@ class Magic : public ObjectWrap {
   public:
     const char* mpath;
     int mflags;
-
+    
+    uv_mutex_t lock_mutex;
+    std::list<struct magic_set *> magics;
+    
     Magic(const char* path, int flags) {
+      uv_mutex_init(&lock_mutex);
       if (path != NULL) {
         /* Windows blows up trying to look up the path '(null)' returned by
            magic_getpath() */
@@ -57,11 +69,19 @@ class Magic : public ObjectWrap {
         flags |= MAGIC_RAW;
 
       mflags = flags;
+      
     }
     ~Magic() {
       if (mpath != NULL) {
         free((void*)mpath);
         mpath = NULL;
+      }
+      
+      struct magic_set *magic;
+      while(!magics.empty()){
+        magic = magics.front();
+        magics.pop_front();
+        magic_close(magic);
       }
     }
 
@@ -130,7 +150,8 @@ class Magic : public ObjectWrap {
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
       baton->result = NULL;
-
+      baton->obj = obj;
+      
       int status = uv_queue_work(uv_default_loop(),
                                  &baton->request,
                                  Magic::DetectWork,
@@ -170,7 +191,8 @@ class Magic : public ObjectWrap {
       baton->path = obj->mpath;
       baton->flags = obj->mflags;
       baton->result = NULL;
-
+      baton->obj = obj;
+      
       int status = uv_queue_work(uv_default_loop(),
                                  &baton->request,
                                  Magic::DetectWork,
@@ -183,37 +205,51 @@ class Magic : public ObjectWrap {
     static void DetectWork(uv_work_t* req) {
       Baton* baton = static_cast<Baton*>(req->data);
       const char* result;
-      struct magic_set *magic = magic_open(baton->flags
+      struct magic_set *magic = NULL;
+      
+#ifndef SLOW_MAGIC      
+      uv_mutex_lock(&baton->obj->lock_mutex);
+      if(!baton->obj->magics.empty()){
+        magic = baton->obj->magics.front();
+        baton->obj->magics.pop_front();
+      }
+      uv_mutex_unlock(&baton->obj->lock_mutex);
+#endif
+
+      if(!magic){
+        magic = magic_open(baton->flags
                                            | MAGIC_NO_CHECK_COMPRESS
                                            | MAGIC_ERROR);
 
-      if (magic == NULL) {
+      
+        if (magic == NULL) {
 #if NODE_MODULE_VERSION <= 0x000B
-        baton->error_message = strdup(uv_strerror(
-                                        uv_last_error(uv_default_loop())));
+          baton->error_message = strdup(uv_strerror(
+                                          uv_last_error(uv_default_loop())));
 #else
 // XXX libuv 1.x currently has no public cross-platform function to convert an
 //     OS-specific error number to a libuv error number. `-errno` should work
 //     for *nix, but just passing GetLastError() on Windows will not work ...
 # ifdef _MSC_VER
-        baton->error_message = strdup(uv_strerror(GetLastError()));
+          baton->error_message = strdup(uv_strerror(GetLastError()));
 # else
-        baton->error_message = strdup(uv_strerror(-errno));
+          baton->error_message = strdup(uv_strerror(-errno));
 # endif
 #endif
-      } else if (magic_load(magic, baton->path) == -1
-                 && magic_load(magic, fallbackPath) == -1) {
-        baton->error_message = strdup(magic_error(magic));
-        magic_close(magic);
-        magic = NULL;
+        } else if (magic_load(magic, baton->path) == -1
+                   && magic_load(magic, fallbackPath) == -1) {
+          baton->error_message = strdup(magic_error(magic));
+          magic_close(magic);
+          magic = NULL;
+        }
+  
+        if (magic == NULL) {
+          if (baton->error_message)
+            baton->error = true;
+          return;
+        }
       }
-
-      if (magic == NULL) {
-        if (baton->error_message)
-          baton->error = true;
-        return;
-      }
-
+      
       if (baton->dataIsPath) {
 #ifdef _WIN32
         // open the file manually to help cope with potential unicode characters
@@ -237,8 +273,7 @@ class Magic : public ObjectWrap {
           baton->error = true;
           baton->free_error = false;
           baton->error_message = "Error while opening file";
-          magic_close(magic);
-          return;
+          goto ret;
         }
         result = magic_descriptor(magic, fd);
         _close(fd);
@@ -257,7 +292,19 @@ class Magic : public ObjectWrap {
       } else
         baton->result = strdup(result);
 
-      magic_close(magic);
+#ifdef _WIN32   
+      ret:
+#endif
+
+      if(magic){
+#ifndef SLOW_MAGIC 
+        uv_mutex_lock(&baton->obj->lock_mutex);
+        baton->obj->magics.push_back(magic);
+        uv_mutex_unlock(&baton->obj->lock_mutex);
+#else
+        magic_close(magic);
+#endif
+      }
     }
 
     static void DetectAfter(uv_work_t* req) {
