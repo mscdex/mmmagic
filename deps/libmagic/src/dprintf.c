@@ -32,7 +32,10 @@ FILE_RCSID("@(#)$File: dprintf.c,v 1.1 2015/11/13 15:36:14 christos Exp $")
 #endif	/* lint */
 
 #include <assert.h>
-#include <unistd.h>
+// XXX: change by mscdex
+#ifndef _MSC_VER
+# include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdarg.h>
 

@@ -34,6 +34,8 @@
               '-lshlwapi.lib',
             ]
           },
+        }, { # POSIX
+          'cflags': [ '-std=c99' ],
         }],
         [ 'OS=="linux"', {
           'sources': [
