@@ -47,7 +47,10 @@ FILE_RCSID("@(#)$File: der.c,v 1.4 2016/03/21 23:04:40 christos Exp $")
 #endif
 
 #include <stdio.h>
-#include <err.h>
+// XXX: change by mscdex
+#ifdef TEST_DER
+# include <err.h>
+#endif
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
