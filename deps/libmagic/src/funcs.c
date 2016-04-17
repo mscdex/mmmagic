@@ -27,7 +27,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: funcs.c,v 1.85 2015/09/17 01:10:51 christos Exp $")
+FILE_RCSID("@(#)$File: funcs.c,v 1.89 2016/03/21 15:56:53 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -251,7 +251,8 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((__u
 
 	/* try soft magic tests */
 	if ((ms->flags & MAGIC_NO_CHECK_SOFT) == 0)
-		m = file_softmagic(ms, ubuf, nb, 0, NULL, BINTEST, looks_text);
+		m = file_softmagic(ms, ubuf, nb, NULL, NULL, BINTEST,
+		    looks_text);
 		if ((ms->flags & MAGIC_DEBUG) != 0)
 			(void)fprintf(stderr, "[try softmagic %d]\n", m);
 		if (m) {
@@ -293,7 +294,8 @@ simple:
 	/* give up */
 	m = 1;
 	if (ms->flags & MAGIC_MIME) {
-		if (file_printf(ms, "%s", type) == -1)
+		if ((ms->flags & MAGIC_MIME_TYPE) &&
+		    file_printf(ms, "%s", type) == -1)
 			rv = -1;
 	} else if (ms->flags & MAGIC_APPLE) {
 		if (file_printf(ms, "UNKNUNKN") == -1)
@@ -493,6 +495,8 @@ file_regcomp(file_regex_t *rx, const char *pat, int flags)
 	assert(rx->c_lc_ctype != NULL);
 	rx->old_lc_ctype = uselocale(rx->c_lc_ctype);
 	assert(rx->old_lc_ctype != NULL);
+#else
+	rx->old_lc_ctype = setlocale(LC_CTYPE, "C");
 #endif
 	rx->pat = pat;
 
@@ -515,6 +519,8 @@ file_regfree(file_regex_t *rx)
 #ifdef USE_C_LOCALE
 	(void)uselocale(rx->old_lc_ctype);
 	freelocale(rx->c_lc_ctype);
+#else
+	(void)setlocale(LC_CTYPE, rx->old_lc_ctype);
 #endif
 }
 

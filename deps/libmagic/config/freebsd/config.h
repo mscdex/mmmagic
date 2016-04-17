@@ -27,6 +27,9 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
+/* Define to 1 if you have the `dprintf' function. */
+#define HAVE_DPRINTF 1
+
 /* Define to 1 if you have the <err.h> header file. */
 #define HAVE_ERR_H 1
 
