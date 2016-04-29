@@ -56,6 +56,11 @@ FILE_RCSID("@(#)$File: der.c,v 1.4 2016/03/21 23:04:40 christos Exp $")
 #include <string.h>
 #include <ctype.h>
 
+// XXX: addition by mscdex
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
 #ifndef TEST_DER
 #include "magic.h"
 #include "der.h"
