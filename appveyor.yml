@@ -7,13 +7,14 @@ environment:
     - nodejs_version: "0.12"
     - nodejs_version: "4"
     - nodejs_version: "5"
+    - nodejs_version: "6"
 
 # Install scripts. (runs after repo cloning)
 install:
   # Get the latest stable version of Node/io.js
   - ps: Install-Product node $env:nodejs_version
   # Fix iojs alias
-  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/fix-iojs-node-alias.ps1'))
+  #- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/fix-iojs-node-alias.ps1'))
   # Typical npm stuff.
   - IF %nodejs_version% LSS 1 npm -g install npm
   - IF %nodejs_version% LSS 1 set PATH=%APPDATA%\npm;%PATH%
