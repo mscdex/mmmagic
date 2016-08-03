@@ -266,7 +266,14 @@
 #define HAVE_WORKING_VFORK 1
 
 /* Define to 1 if you have the <xlocale.h> header file. */
-#define HAVE_XLOCALE_H 1
+#if defined(__has_include)
+# if __has_include(<xlocale.h>)
+#  define HAVE_XLOCALE_H 1
+# endif
+#else
+// Assume header available for older compilers
+# define HAVE_XLOCALE_H 1
+#endif
 
 /* Define to 1 if you have the <zlib.h> header file. */
 /* #define HAVE_ZLIB_H 1 */
