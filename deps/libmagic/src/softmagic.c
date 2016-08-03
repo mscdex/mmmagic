@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: softmagic.c,v 1.229 2016/03/21 23:04:40 christos Exp $")
+FILE_RCSID("@(#)$File: softmagic.c,v 1.234 2016/06/13 12:02:06 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -254,7 +254,6 @@ flush:
 
 		switch (moffset(ms, m, nbytes, &ms->c.li[cont_level].off)) {
 		case -1:
-			return -1;
 		case 0:
 			goto flush;
 		default:
@@ -368,7 +367,6 @@ flush:
 				switch (moffset(ms, m, nbytes,
 				    &ms->c.li[cont_level].off)) {
 				case -1:
-					return -1;
 				case 0:
 					flush = 1;
 					break;
@@ -829,6 +827,7 @@ moffset(struct magic_set *ms, struct magic *m, size_t nbytes, int32_t *op)
 					    "Bad DER offset %d nbytes=%zu",
 					    o, nbytes);
 				}
+				*op = 0;
 				return 0;
 			}
 			break;
@@ -840,8 +839,10 @@ moffset(struct magic_set *ms, struct magic *m, size_t nbytes, int32_t *op)
 	}
 
 	if ((size_t)o > nbytes) {
+#if 0
 		file_error(ms, 0, "Offset out of range %zu > %zu",
 		    (size_t)o, nbytes);
+#endif
 		return -1;
 	}
 	*op = o;
@@ -1181,6 +1182,8 @@ mcopy(struct magic_set *ms, union VALUETYPE *p, int type, int indir,
 		switch (type) {
 		case FILE_DER:
 		case FILE_SEARCH:
+			if (offset > nbytes)
+				offset = nbytes;
 			ms->search.s = RCAST(const char *, s) + offset;
 			ms->search.s_len = nbytes - offset;
 			ms->search.offset = offset;
@@ -2077,6 +2080,7 @@ magiccheck(struct magic_set *ms, struct magic *m)
 			if (slen != 0) {
 			    copy = malloc(slen);
 			    if (copy == NULL)  {
+				file_regfree(&rx);
 				file_error(ms, errno,
 				    "can't allocate %" SIZE_T_FORMAT "u bytes",
 				    slen);
