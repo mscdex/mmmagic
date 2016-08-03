@@ -38,7 +38,7 @@ static Nan::Persistent<Function> constructor;
 static const char* fallbackPath;
 
 class Magic : public ObjectWrap {
-  public:
+public:
     const char* mpath;
     int mflags;
 
