@@ -50,6 +50,7 @@ FILE_RCSID("@(#)$File: cdf.c,v 1.82 2016/06/01 22:25:25 christos Exp $")
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
+#include <unistd.h>
 
 #ifndef EFTYPE
 #define EFTYPE EINVAL
