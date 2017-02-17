@@ -271,7 +271,7 @@ public:
           free(baton->error_message);
 
         Local<Value> argv[1] = { err };
-        baton->callback->Call(1, argv);
+        node::MakeCallback(Context::GetCurrent()->Global(), baton->callback->GetFunction(), 1, argv);
       } else {
         Local<Value> argv[2];
         int multi_result_flags = (baton->flags & (MAGIC_CONTINUE | MAGIC_RAW));
@@ -318,7 +318,7 @@ public:
         if (baton->result)
           free((void*)baton->result);
 
-        baton->callback->Call(2, argv);
+        node::MakeCallback(Context::GetCurrent()->Global(), baton->callback->GetFunction(), 2, argv);
       }
 
       if (baton->dataIsPath)
