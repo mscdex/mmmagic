@@ -98,6 +98,30 @@ var tests = [
     },
     what: 'detect - Normal operation, mime type'
   },
+  { run: function() {
+      var dummy_magic_file = path.join(__dirname, 'dummy_magic_file');
+      var magic = new mmm.Magic();
+      magic.compile(dummy_magic_file, function(err, result) {
+        assert.strictEqual(err, null);
+        assert.deepEqual(result, ['dummy_magic_file' + '.mgc']);
+        next();
+      });
+    },
+    what: 'compile - one file'
+  }, 
+  { run: function() {
+      var dummy_magic_file = path.join(__dirname, 'dummy_magic_file');
+      var dummy_magic_file2 = dummy_magic_file + "2";
+      var colon_seperated_magic_files = dummy_magic_file + ":" + dummy_magic_file2;
+      var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+      magic.compile(colon_seperated_magic_files, function(err, result) {
+        assert.strictEqual(err, null);
+        assert.deepEqual(result, ['dummy_magic_file' + '.mgc', 'dummy_magic_file2' + '.mgc']);
+        next();
+      });
+    },
+    what: 'compile - several files'
+  }
 ];
 
 function next() {
