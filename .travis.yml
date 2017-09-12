@@ -8,7 +8,7 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-4.8
+    - g++-6
 notifications:
   email: false
 env:
@@ -16,12 +16,13 @@ env:
   - TRAVIS_NODE_VERSION="0.10"
   - TRAVIS_NODE_VERSION="0.12"
   - TRAVIS_NODE_VERSION="4"
-  - TRAVIS_NODE_VERSION="5"
   - TRAVIS_NODE_VERSION="6"
+  - TRAVIS_NODE_VERSION="7"
+  - TRAVIS_NODE_VERSION="8"
 install:
   - "rm -rf ~/.nvm && mkdir -p ~/.nvm && curl -sL `curl -sI https://github.com/creationix/nvm/releases/latest|sed -En 's/^Location: (.+)\\/releases\\/tag\\/(.+)/\\1\\/tarball\\/\\2/p'|tr -d '\r\n'`|tar zx --strip=1 -C ~/.nvm && source ~/.nvm/nvm.sh && nvm install $TRAVIS_NODE_VERSION"
   - npm --version
-  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CXX=g++-4.8; export CC=gcc-4.8; fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CXX=g++-6; export CC=gcc-6; fi
   - $CXX --version
   - npm install
 script: npm test
