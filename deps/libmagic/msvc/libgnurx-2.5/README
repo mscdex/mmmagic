@@ -1,0 +1,33 @@
+This is the regex functionality from glibc 2.5 extracted into a
+separate library, for Win32.
+
+I call the DLL libgnurx-0.dll which hopefully should be unique. At
+least it isn't "regex.dll" which has been used by the
+gnuwin32.sourceforge.net site for *two* incompatible DLLs. (That mess,
+and the mess with their build of Henry Spencer's regex library, was
+what lead me to build my own GNU regex library. See the gnuwin32-users mailing list archives from December 2006.)
+
+The "-0" is so that if at some point I build a release that isn't
+binary compatible, I can then increment that and use a different name.
+
+The import library for gcc is called libgnurx.dll.a, but I also
+distribute a copy of it called libregex.a so that configure scripts
+that look for -lregex will work.
+
+Note that none of the wide-character and i18n functionality which is
+built when this is part of glibc gets compiled. Thus things like
+character classes most probably work only for single-byte codepages.
+
+Compiling that stuff would drag in lots of glibc's locale handling
+stuff which is completely incompatible with Microsoft's C library's
+locale handling anyway. Also, I am not sure whether the GNU regex code
+is prepared to handle a two-byte wchar_t, or does it assume that
+wchar_t is int as it is on Linux? Hmm, actually there is lots of
+sizeof(wchar_t) in glibc, so maybe it *is* prepared? Maybe
+later... But anyway, it would presumably mean we should have not just
+the regex functionality but a larger subset of glibc that would
+include all locale, ctype, wchar, mbs, etc stuff, presumably ending up
+with a very large part of glibc (not the system calls,
+obviously). Indeed, something to save for later, or never...
+
+--Tor Lillqvist <tml@iki.fi>, <tml@novell.com>

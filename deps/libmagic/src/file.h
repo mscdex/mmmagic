@@ -97,8 +97,7 @@ typedef unsigned int mode_t;
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
-// XXX: change by mscdex
-#include <pcre/regex.h>
+#include <regex.h>
 #include <time.h>
 #include <sys/types.h>
 // XXX: change by mscdex
