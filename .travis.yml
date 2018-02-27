@@ -19,6 +19,7 @@ env:
   - TRAVIS_NODE_VERSION="9"
 install:
   - "rm -rf ~/.nvm && mkdir -p ~/.nvm && curl -sL `curl -sI https://github.com/creationix/nvm/releases/latest|sed -En 's/^Location: (.+)\\/releases\\/tag\\/(.+)/\\1\\/tarball\\/\\2/p'|tr -d '\r\n'`|tar zx --strip=1 -C ~/.nvm && source ~/.nvm/nvm.sh && nvm install $TRAVIS_NODE_VERSION"
+  - node --version
   - npm --version
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CXX=g++-6; export CC=gcc-6; fi
   - $CXX --version
