@@ -1,22 +1,31 @@
 # http://www.appveyor.com/docs/appveyor-yml
 
+# This image contains both 2013 and 2015
+os: Visual Studio 2015
+
 # Test against these versions of Node.js.
 environment:
   matrix:
-    - nodejs_version: "0.10"
-    - nodejs_version: "0.12"
     - nodejs_version: "4"
+      GYP_MSVS_VERSION: "2013"
+    - nodejs_version: "4"
+      GYP_MSVS_VERSION: "2015"
     - nodejs_version: "6"
-    - nodejs_version: "7"
+      GYP_MSVS_VERSION: "2013"
+    - nodejs_version: "6"
+      GYP_MSVS_VERSION: "2015"
     - nodejs_version: "8"
+      GYP_MSVS_VERSION: "2013"
+    - nodejs_version: "8"
+      GYP_MSVS_VERSION: "2015"
+    - nodejs_version: "9"
+      GYP_MSVS_VERSION: "2015"
 
 # Install scripts. (runs after repo cloning)
 install:
   # Get the latest stable version of Node
   - ps: Install-Product node $env:nodejs_version
   # Typical npm stuff.
-  - IF %nodejs_version% LSS 1 npm -g install npm
-  - IF %nodejs_version% LSS 1 set PATH=%APPDATA%\npm;%PATH%
   - set CL=-DDELAYIMP_INSECURE_WRITABLE_HOOKS
   - npm install
 
