@@ -8,8 +8,6 @@
 # include <io.h>
 # include <fcntl.h>
 # include <wchar.h>
-#else 
-# include <libgen.h>
 #endif
 
 #include "magic.h"
@@ -432,55 +430,21 @@ public:
         Local<Value> argv[2];
         // no Error
         argv[0] = Nan::Null();
-      
-        // Creating the list of the compiled magic files
-        Local<Array> results = Nan::New<Array>();
-        uint32_t i = 0;
-        char *file_path = strtok(baton->data, ";");
 
-        while(file_path != NULL)
-        {
-            // Getting the file name from the source
-            const char* file_path_dup = strdup(file_path);
-            const char* file_name;
-#ifdef _WIN32
-            char drive[_MAX_DRIVE];
-            char dir[_MAX_DIR];
-            char fname[_MAX_FNAME];
-            char ext[_MAX_EXT];
-            _splitpath_s(file_path_dup, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, ext, _MAX_EXT);
-            file_name = fname;
-#else
-            file_name = basename(file_path_dup);
-#endif
+        // Preparing result
+        size_t file_name_length = strlen(baton->data);
+        size_t mgc_file_name_length = file_name_length + 4;
+        char* mgc_file_name = new char[mgc_file_name_length + 1];
+        strcpy(mgc_file_name, baton->data);
+        strcat(mgc_file_name, ".mgc");
+        mgc_file_name[mgc_file_name_length] = '\0';
+        argv[1] = Nan::New<String>(mgc_file_name).ToLocalChecked();
+        delete[] mgc_file_name;
 
-            // Creating the name of the mgc file (which is the magic file name + ".mgc")
-            size_t file_name_length = strlen(file_name);
-            size_t mgc_file_name_length = file_name_length + 4;
-            char* mgc_file_name = new char[mgc_file_name_length + 1];
-            strcpy(mgc_file_name, file_name);
-            strcat(mgc_file_name, ".mgc");
-            mgc_file_name[mgc_file_name_length] = '\0';
-
-            // Adding to results
-            Nan::Set(Local<Object>::Cast(results),
-                           i++,
-                           Nan::New<String>(mgc_file_name).ToLocalChecked());
-
-            // Cleaning
-            free((void*)file_path_dup);
-            delete[] mgc_file_name;
-
-            // Looking for the next file name
-            file_path=strtok(NULL, ";");
-        }
-
-        argv[1] = Local<Value>(results);
+        baton->callback->Call(2, argv);
 
         if (baton->result)
           free((void*)baton->result);
-
-        baton->callback->Call(2, argv);
       }
 
       free(baton->data);
