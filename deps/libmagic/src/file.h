@@ -27,7 +27,7 @@
  */
 /*
  * file.h - definitions for file(1) program
- * @(#)$File: file.h,v 1.178 2016/03/31 17:51:12 christos Exp $
+ * @(#)$File: file.h,v 1.183 2017/08/28 13:39:18 christos Exp $
  */
 
 #ifndef __file_h__
@@ -35,6 +35,10 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
+#ifdef HAVE_STDINT_H
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
 #endif
 
 // XXX: change by mscdex
@@ -84,21 +88,16 @@ typedef unsigned int mode_t;
   #define INT64_T_FORMAT "ll"
   #define INTMAX_T_FORMAT "j"
 #endif
+#include <stdint.h>
+#endif
 
 #include <stdio.h>	/* Include that here, to make sure __P gets defined */
 #include <errno.h>
 #include <fcntl.h>	/* For open and flags */
-#ifdef HAVE_STDINT_H
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
-#include <stdint.h>
-#endif
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
-// XXX: change by mscdex
-#include <pcre/regex.h>
+#include <regex.h>
 #include <time.h>
 #include <sys/types.h>
 // XXX: change by mscdex
@@ -170,11 +169,11 @@ typedef unsigned int mode_t;
 				   or directory */
 #define MAXDESC	64		/* max len of text description/MIME type */
 #define MAXMIME	80		/* max len of text MIME type */
-#define MAXstring 64		/* max len of "string" types */
+#define MAXstring 96		/* max len of "string" types */
 
 #define MAGICNO		0xF11E041C
-#define VERSIONNO	13
-#define FILE_MAGICSIZE	312
+#define VERSIONNO	14
+#define FILE_MAGICSIZE	344
 
 #define	FILE_LOAD	0
 #define FILE_CHECK	1
@@ -311,7 +310,7 @@ struct magic {
 #define				FILE_OPS_MASK	0x07 /* mask for above ops */
 #define				FILE_UNUSED_1	0x08
 #define				FILE_UNUSED_2	0x10
-#define				FILE_UNUSED_3	0x20
+#define				FILE_OPSIGNED	0x20
 #define				FILE_OPINVERSE	0x40
 #define				FILE_OPINDIRECT	0x80
 
@@ -483,7 +482,7 @@ protected size_t file_printedlen(const struct magic_set *);
 protected int file_replace(struct magic_set *, const char *, const char *);
 protected int file_printf(struct magic_set *, const char *, ...)
     __attribute__((__format__(__printf__, 2, 3)));
-protected int file_reset(struct magic_set *);
+protected int file_reset(struct magic_set *, int);
 protected int file_tryelf(struct magic_set *, int, const unsigned char *,
     size_t);
 protected int file_trycdf(struct magic_set *, int, const unsigned char *,

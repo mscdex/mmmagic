@@ -3,11 +3,8 @@
     {
       'target_name': 'libmagic',
       'type': 'static_library',
-      'include_dirs': [ '.', 'src', 'pcre' ],
-      'dependencies': [
-        'pcre/pcre.gyp:libpcre',
-      ],
-      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.28"' ],
+      'include_dirs': [ '.', 'src' ],
+      'defines': [ 'HAVE_CONFIG_H', 'VERSION="5.32"' ],
       'conditions': [
         [ 'OS!="freebsd" and OS!="mac"', {
           'sources': [ 'src/fmtcheck.c' ],
@@ -27,8 +24,10 @@
             'src/strlcat.c',
             'src/strlcpy.c',
             'src/vasprintf.c',
+            # POSIX regex implementation
+            'msvc/libgnurx-2.5/regex.c',
           ],
-          'include_dirs': [ 'msvc', 'config/win' ],
+          'include_dirs': [ 'config/win', 'msvc', 'msvc/libgnurx-2.5' ],
           'link_settings': {
             'libraries': [
               '-lshlwapi.lib',

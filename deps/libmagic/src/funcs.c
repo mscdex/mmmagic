@@ -27,7 +27,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: funcs.c,v 1.89 2016/03/21 15:56:53 christos Exp $")
+FILE_RCSID("@(#)$File: funcs.c,v 1.93 2017/08/28 13:39:18 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -76,7 +76,7 @@ file_vprintf(struct magic_set *ms, const char *fmt, va_list ap)
 	ms->o.buf = buf;
 	return 0;
 out:
-	file_error(ms, errno, "vasprintf failed");
+	fprintf(stderr, "vasprintf failed (%s)", strerror(errno));
 	return -1;
 }
 
@@ -250,7 +250,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((__u
 	}
 
 	/* try soft magic tests */
-	if ((ms->flags & MAGIC_NO_CHECK_SOFT) == 0)
+	if ((ms->flags & MAGIC_NO_CHECK_SOFT) == 0) {
 		m = file_softmagic(ms, ubuf, nb, NULL, NULL, BINTEST,
 		    looks_text);
 		if ((ms->flags & MAGIC_DEBUG) != 0)
@@ -277,6 +277,7 @@ file_buffer(struct magic_set *ms, int fd, const char *inname __attribute__ ((__u
 			if (checkdone(ms, &rv))
 				goto done;
 		}
+	}
 
 	/* try text properties */
 	if ((ms->flags & MAGIC_NO_CHECK_TEXT) == 0) {
@@ -327,9 +328,9 @@ simple:
 #endif
 
 protected int
-file_reset(struct magic_set *ms)
+file_reset(struct magic_set *ms, int checkloaded)
 {
-	if (ms->mlist[0] == NULL) {
+	if (checkloaded && ms->mlist[0] == NULL) {
 		file_error(ms, 0, "no magic files loaded");
 		return -1;
 	}
@@ -508,6 +509,8 @@ file_regexec(file_regex_t *rx, const char *str, size_t nmatch,
     regmatch_t* pmatch, int eflags)
 {
 	assert(rx->rc == 0);
+	/* XXX: force initialization because glibc does not always do this */
+	memset(pmatch, 0, nmatch * sizeof(*pmatch));
 	return regexec(&rx->rx, str, nmatch, pmatch, eflags);
 }
 
