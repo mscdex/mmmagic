@@ -82,7 +82,7 @@ Examples
 
   var magic = new Magic();
   
-  magic.compile("node_modules/mmmagic/test/dummy_magic_file", function(err, result) {
+  magic.compile("node_modules/mmmagic/test/dummy_magic_file;node_modules/mmmagic/test/dummy_magic_file2", function(err, result) {
       if (err) throw err;
       console.log("Compiled magic file successfully. Compile file name: ", result);
       // output: Compiled magic file successfully. Compile file name: [ 'dummy_magic_file.mgc' ]
@@ -122,4 +122,4 @@ Magic methods
 
 * **detect**(< _Buffer_ >data, < _Function_ >callback) - _(void)_ - Inspects the contents of data. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and a < _String_ > containing the result of the inspection.
 
-* **compile**(< _String_ >path, < _Function_ >callback) - _(void)_ - Compile a colon separated list of database files. The compiled files can be used later on with one of the other methods. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and an array of < _String_ > containing the names of the compiled files.
+* **compile**(< _String_ >path, < _Function_ >callback) - _(void)_ - Compile a semicolon separated list of database files. The compiled files can be used later on with one of the other methods. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and an array of < _String_ > containing the names of the compiled files.

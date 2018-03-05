@@ -112,7 +112,7 @@ var tests = [
   { run: function() {
       var dummy_magic_file = path.join(__dirname, 'dummy_magic_file');
       var dummy_magic_file2 = dummy_magic_file + "2";
-      var colon_seperated_magic_files = dummy_magic_file + ":" + dummy_magic_file2;
+      var colon_seperated_magic_files = dummy_magic_file + ";" + dummy_magic_file2;
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
       magic.compile(colon_seperated_magic_files, function(err, result) {
         assert.strictEqual(err, null);

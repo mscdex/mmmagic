@@ -8,6 +8,8 @@
 # include <io.h>
 # include <fcntl.h>
 # include <wchar.h>
+#else 
+# include <libgen.h>
 #endif
 
 #include "magic.h"
@@ -434,13 +436,23 @@ public:
         // Creating the list of the compiled magic files
         Local<Array> results = Nan::New<Array>();
         uint32_t i = 0;
-        char *file_path = strtok(baton->data, ":");
+        char *file_path = strtok(baton->data, ";");
 
         while(file_path != NULL)
         {
             // Getting the file name from the source
             const char* file_path_dup = strdup(file_path);
-            const char* file_name = basename(file_path_dup);
+            const char* file_name;
+#ifdef _WIN32
+            char drive[_MAX_DRIVE];
+            char dir[_MAX_DIR];
+            char fname[_MAX_FNAME];
+            char ext[_MAX_EXT];
+            _splitpath_s(file_path_dup, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, ext, _MAX_EXT);
+            file_name = fname;
+#else
+            file_name = basename(file_path_dup);
+#endif
 
             // Creating the name of the mgc file (which is the magic file name + ".mgc")
             size_t file_name_length = strlen(file_name);
@@ -460,7 +472,7 @@ public:
             delete[] mgc_file_name;
 
             // Looking for the next file name
-            file_path=strtok(NULL, ":");
+            file_path=strtok(NULL, ";");
         }
 
         argv[1] = Local<Value>(results);
