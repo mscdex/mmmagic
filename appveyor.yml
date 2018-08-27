@@ -18,7 +18,7 @@ environment:
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "8"
       GYP_MSVS_VERSION: "2015"
-    - nodejs_version: "9"
+    - nodejs_version: "10"
       GYP_MSVS_VERSION: "2015"
 
 # Install scripts. (runs after repo cloning)
