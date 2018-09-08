@@ -76,6 +76,19 @@ Examples
   });
 ```
 
+* Compile a magic file:
+```javascript
+  var Magic = require('mmmagic').Magic;
+
+  var magic = new Magic();
+  
+  magic.compile("node_modules/mmmagic/test/dummy_magic_file", function(err, result) {
+      if (err) throw err;
+      console.log("Compiled magic file successfully. Compile file name: ", result);
+      // output: Compiled magic file successfully. Compile file name: 'node_modules/mmmagic/test/dummy_magic_file.mgc'
+  });
+```
+
 API
 ===
 
@@ -108,3 +121,5 @@ Magic methods
 * **detectFile**(< _String_ >path, < _Function_ >callback) - _(void)_ - Inspects the file pointed at by path. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and a < _String_ > containing the result of the inspection.
 
 * **detect**(< _Buffer_ >data, < _Function_ >callback) - _(void)_ - Inspects the contents of data. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and a < _String_ > containing the result of the inspection.
+
+* **compile**(< _String_ >path, < _Function_ >callback) - _(void)_ - Compile a single database file. The compiled file can be used later on with one of the other methods. The callback receives two arguments: an < _Error_ > object in case of error (null otherwise), and a < _String_ > containing the name of the compiled magic file.

@@ -342,14 +342,124 @@ public:
       return args.GetReturnValue().Set(args.This());
     }
 
-    static void Initialize(Handle<Object> target) {
+    static void Compile(const Nan::FunctionCallbackInfo<v8::Value>& args) {
+      Nan::HandleScope();
+      Magic* obj = ObjectWrap::Unwrap<Magic>(args.This());
 
+      if (args.Length() < 2)
+        return Nan::ThrowTypeError("Expecting 2 arguments");
+      if (!args[0]->IsString())
+        return Nan::ThrowTypeError("First argument must be a string");
+      if (!args[1]->IsFunction())
+        return Nan::ThrowTypeError("Second argument must be a callback function");
+
+      Local<Function> callback = Local<Function>::Cast(args[1]);
+      String::Utf8Value str(args[0]->ToString());
+
+      Baton* baton = new Baton();
+      baton->error = false;
+      baton->free_error = true;
+      baton->error_message = NULL;
+      baton->request.data = baton;
+      baton->callback = new Nan::Callback(callback);
+      baton->data = strdup((const char*)*str);
+      baton->path = obj->mpath;
+      baton->result = NULL;
+
+      int status = uv_queue_work(uv_default_loop(),
+                                 &baton->request,
+                                 Magic::CompileWork,
+                                 (uv_after_work_cb)Magic::CompileAfter);
+      assert(status == 0);
+
+      args.GetReturnValue().Set(Nan::Undefined());
+    }
+
+    static void CompileWork(uv_work_t* req) {
+      Baton* baton = static_cast<Baton*>(req->data);
+      struct magic_set *magic = magic_open(baton->flags
+                                           | MAGIC_NO_CHECK_COMPRESS
+                                           | MAGIC_ERROR);
+
+      if (magic == NULL) {
+        baton->error = true;
+#if NODE_MODULE_VERSION <= 0x000B
+        baton->error_message = strdup(uv_strerror(
+                                        uv_last_error(uv_default_loop())));
+#else
+// XXX libuv 1.x currently has no public cross-platform function to convert an
+//     OS-specific error number to a libuv error number. `-errno` should work
+//     for *nix, but just passing GetLastError() on Windows will not work ...
+# ifdef _MSC_VER
+        baton->error_message = strdup(uv_strerror(GetLastError()));
+# else
+        baton->error_message = strdup(uv_strerror(-errno));
+# endif
+#endif
+        return;
+      }
+
+      int compile_result = magic_compile(magic, baton->data);
+
+      // Compile returns -1 if failed, and 0 if succeeded
+      if (compile_result == -1) {
+        const char* error = magic_error(magic);
+        if (error) {
+          baton->error = true;
+          baton->error_message = strdup(error);
+        }
+      }
+
+      magic_close(magic);
+    }
+
+    static void CompileAfter(uv_work_t* req) {
+      Nan::HandleScope scope;
+      Baton* baton = static_cast<Baton*>(req->data);
+
+      if (baton->error) {
+        // In case of error - return it to the user.
+        Local<Value> err = Nan::Error(baton->error_message);
+
+        if (baton->free_error)
+          free(baton->error_message);
+
+        Local<Value> argv[1] = { err };
+        baton->callback->Call(1, argv);
+      } else {
+        Local<Value> argv[2];
+        // no Error
+        argv[0] = Nan::Null();
+
+        // Preparing result
+        size_t file_name_length = strlen(baton->data);
+        size_t mgc_file_name_length = file_name_length + 4;
+        char* mgc_file_name = new char[mgc_file_name_length + 1];
+        strcpy(mgc_file_name, baton->data);
+        strcat(mgc_file_name, ".mgc");
+        mgc_file_name[mgc_file_name_length] = '\0';
+        argv[1] = Nan::New<String>(mgc_file_name).ToLocalChecked();
+        delete[] mgc_file_name;
+
+        baton->callback->Call(2, argv);
+
+        if (baton->result)
+          free((void*)baton->result);
+      }
+
+      free(baton->data);
+      delete baton->callback;
+      delete baton;
+    }
+
+    static void Initialize(Handle<Object> target) {
       Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
 
       tpl->InstanceTemplate()->SetInternalFieldCount(1);
       tpl->SetClassName(Nan::New<String>("Magic").ToLocalChecked());
       Nan::SetPrototypeMethod(tpl, "detectFile", DetectFile);
       Nan::SetPrototypeMethod(tpl, "detect", Detect);
+      Nan::SetPrototypeMethod(tpl, "compile", Compile);
 
       constructor.Reset(tpl->GetFunction());
       target->Set(Nan::New<String>("setFallback").ToLocalChecked(),

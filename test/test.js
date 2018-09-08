@@ -98,6 +98,17 @@ var tests = [
     },
     what: 'detect - Normal operation, mime type'
   },
+  { run: function() {
+      var dummy_magic_file = path.join(__dirname, 'dummy_magic_file');
+      var magic = new mmm.Magic();
+      magic.compile(dummy_magic_file, function(err, result) {
+        assert.strictEqual(err, null);
+        assert.deepEqual(result, dummy_magic_file + '.mgc');
+        next();
+      });
+    },
+    what: 'compile'
+  }
 ];
 
 function next() {
