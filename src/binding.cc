@@ -20,11 +20,14 @@ struct Baton {
   Nan::Callback* callback;
 
   char* data;
-  uint32_t dataLen;
-  bool dataIsPath;
+  size_t data_len;
+  bool data_is_path;
+  Nan::Persistent<Object> data_buffer;
 
   // libmagic info
-  const char* path;
+  const char* magic_source;
+  size_t source_len;
+  bool source_is_path;
   int flags;
 
   bool error;
@@ -39,17 +42,19 @@ static const char* fallbackPath;
 
 class Magic : public ObjectWrap {
 public:
-    const char* mpath;
+    Nan::Persistent<Object> mgc_buffer;
+    size_t mgc_buffer_len;
+    const char* msource;
     int mflags;
 
     Magic(const char* path, int flags) {
-      if (path != NULL) {
+      if (path != nullptr) {
         /* Windows blows up trying to look up the path '(null)' returned by
            magic_getpath() */
         if (strncmp(path, "(null)", 6) == 0)
-          path = NULL;
+          path = nullptr;
       }
-      mpath = (path == NULL ? strdup(fallbackPath) : path);
+      msource = (path == nullptr ? strdup(fallbackPath) : path);
 
       // When returning multiple matches, MAGIC_RAW needs to be set so that we
       // can more easily parse the output into an array for the end user
@@ -58,11 +63,26 @@ public:
 
       mflags = flags;
     }
+
+    Magic(Handle<Object> buffer, int flags) {
+      mgc_buffer.Reset(buffer);
+      mgc_buffer_len = Buffer::Length(buffer);
+      msource = Buffer::Data(buffer);
+
+      // When returning multiple matches, MAGIC_RAW needs to be set so that we
+      // can more easily parse the output into an array for the end user
+      if (flags & MAGIC_CONTINUE)
+        flags |= MAGIC_RAW;
+
+      mflags = flags;
+    }
+
     ~Magic() {
-      if (mpath != NULL) {
-        free((void*)mpath);
-        mpath = NULL;
-      }
+      if (!mgc_buffer.IsEmpty())
+        mgc_buffer.Reset();
+      else if (msource != nullptr)
+        free((void*)msource);
+      msource = nullptr;
     }
 
     static void New(const Nan::FunctionCallbackInfo<v8::Value>& args) {
@@ -72,8 +92,7 @@ public:
 #else
       int magic_flags = MAGIC_NONE;
 #endif
-      char* path = NULL;
-      bool use_bundled = true;
+      Magic* obj;
 
       if (!args.IsConstructCall())
         return Nan::ThrowTypeError("Use `new` to create instances of this object.");
@@ -87,19 +106,26 @@ public:
 
       if (args.Length() > 0) {
         if (args[0]->IsString()) {
-          use_bundled = false;
           String::Utf8Value str(args[0]->ToString());
-          path = strdup((const char*)(*str));
-        } else if (args[0]->IsInt32())
+          char* path = strdup((const char*)(*str));
+          obj = new Magic(path, magic_flags);
+        } else if (Buffer::HasInstance(args[0])) {
+          obj = new Magic(args[0].As<Object>(), magic_flags);
+        } else if (args[0]->IsInt32()) {
           magic_flags = args[0]->Int32Value();
-        else if (args[0]->IsBoolean() && !args[0]->BooleanValue()) {
-          use_bundled = false;
-          path = strdup(magic_getpath(NULL, 0/*FILE_LOAD*/));
-        } else
-          return Nan::ThrowTypeError("First argument must be a string or integer");
+          obj = new Magic(nullptr, magic_flags);
+        } else if (args[0]->IsBoolean() && !args[0]->BooleanValue()) {
+          char* path = strdup(magic_getpath(nullptr, 0/*FILE_LOAD*/));
+          obj = new Magic(path, magic_flags);
+        } else {
+          return Nan::ThrowTypeError(
+            "First argument must be a string, Buffer, or integer"
+          );
+        }
+      } else {
+        obj = new Magic(nullptr, magic_flags);
       }
 
-      Magic* obj = new Magic((use_bundled ? NULL : path), magic_flags);
       obj->Wrap(args.This());
       obj->Ref();
 
@@ -122,14 +148,16 @@ public:
       Baton* baton = new Baton();
       baton->error = false;
       baton->free_error = true;
-      baton->error_message = NULL;
+      baton->error_message = nullptr;
       baton->request.data = baton;
       baton->callback = new Nan::Callback(callback);
       baton->data = strdup((const char*)*str);
-      baton->dataIsPath = true;
-      baton->path = obj->mpath;
+      baton->data_is_path = true;
+      baton->magic_source = obj->msource;
+      baton->source_len = obj->mgc_buffer_len;
+      baton->source_is_path = obj->mgc_buffer.IsEmpty();
       baton->flags = obj->mflags;
-      baton->result = NULL;
+      baton->result = nullptr;
 
       int status = uv_queue_work(uv_default_loop(),
                                  &baton->request,
@@ -152,24 +180,23 @@ public:
         return Nan::ThrowTypeError("Second argument must be a callback function");
 
       Local<Function> callback = Local<Function>::Cast(args[1]);
-#if NODE_MAJOR_VERSION == 0 && NODE_MINOR_VERSION < 10
-      Local<Object> buffer_obj = args[0]->ToObject();
-#else
-      Local<Value> buffer_obj = args[0];
-#endif
+      Local<Object> buffer_obj = args[0].As<Object>();
 
       Baton* baton = new Baton();
       baton->error = false;
       baton->free_error = true;
-      baton->error_message = NULL;
+      baton->error_message = nullptr;
       baton->request.data = baton;
       baton->callback = new Nan::Callback(callback);
       baton->data = Buffer::Data(buffer_obj);
-      baton->dataLen = Buffer::Length(buffer_obj);
-      baton->dataIsPath = false;
-      baton->path = obj->mpath;
+      baton->data_len = Buffer::Length(buffer_obj);
+      baton->data_buffer.Reset(buffer_obj);
+      baton->data_is_path = false;
+      baton->magic_source = obj->msource;
+      baton->source_len = obj->mgc_buffer_len;
+      baton->source_is_path = obj->mgc_buffer.IsEmpty();
       baton->flags = obj->mflags;
-      baton->result = NULL;
+      baton->result = nullptr;
 
       int status = uv_queue_work(uv_default_loop(),
                                  &baton->request,
@@ -183,11 +210,11 @@ public:
     static void DetectWork(uv_work_t* req) {
       Baton* baton = static_cast<Baton*>(req->data);
       const char* result;
-      struct magic_set *magic = magic_open(baton->flags
+      struct magic_set* magic = magic_open(baton->flags
                                            | MAGIC_NO_CHECK_COMPRESS
                                            | MAGIC_ERROR);
 
-      if (magic == NULL) {
+      if (magic == nullptr) {
 #if NODE_MODULE_VERSION <= 0x000B
         baton->error_message = strdup(uv_strerror(
                                         uv_last_error(uv_default_loop())));
@@ -201,28 +228,37 @@ public:
         baton->error_message = strdup(uv_strerror(-errno));
 # endif
 #endif
-      } else if (magic_load(magic, baton->path) == -1
-                 && magic_load(magic, fallbackPath) == -1) {
+      } else if (baton->source_is_path) {
+        if (magic_load(magic, baton->magic_source) == -1
+            && magic_load(magic, fallbackPath) == -1) {
+          baton->error_message = strdup(magic_error(magic));
+          magic_close(magic);
+          magic = nullptr;
+        }
+      } else if (magic_load_buffers(magic,
+                                    (void**)&baton->magic_source,
+                                    &baton->source_len,
+                                    1) == -1) {
         baton->error_message = strdup(magic_error(magic));
         magic_close(magic);
-        magic = NULL;
+        magic = nullptr;
       }
 
-      if (magic == NULL) {
+      if (magic == nullptr) {
         if (baton->error_message)
           baton->error = true;
         return;
       }
 
-      if (baton->dataIsPath) {
+      if (baton->data_is_path) {
 #ifdef _WIN32
         // open the file manually to help cope with potential unicode characters
         // in filename
         const char* ofn = baton->data;
-        int flags = O_RDONLY|O_BINARY;
+        int flags = O_RDONLY | O_BINARY;
         int fd = -1;
         int wLen;
-        wLen = MultiByteToWideChar(CP_UTF8, 0, ofn, -1, NULL, 0);
+        wLen = MultiByteToWideChar(CP_UTF8, 0, ofn, -1, nullptr, 0);
         if (wLen > 0) {
           wchar_t* wfn = (wchar_t*)malloc(wLen * sizeof(wchar_t));
           if (wfn) {
@@ -230,7 +266,7 @@ public:
             if (wret != 0)
               _wsopen_s(&fd, wfn, flags, _SH_DENYNO, _S_IREAD);
             free(wfn);
-            wfn = NULL;
+            wfn = nullptr;
           }
         }
         if (fd == -1) {
@@ -245,17 +281,19 @@ public:
 #else
         result = magic_file(magic, baton->data);
 #endif
-      } else
-        result = magic_buffer(magic, (const void*)baton->data, baton->dataLen);
+      } else {
+        result = magic_buffer(magic, (const void*)baton->data, baton->data_len);
+      }
 
-      if (result == NULL) {
+      if (result == nullptr) {
         const char* error = magic_error(magic);
         if (error) {
           baton->error = true;
           baton->error_message = strdup(error);
         }
-      } else
+      } else {
         baton->result = strdup(result);
+      }
 
       magic_close(magic);
     }
@@ -263,6 +301,8 @@ public:
     static void DetectAfter(uv_work_t* req) {
       Nan::HandleScope scope;
       Baton* baton = static_cast<Baton*>(req->data);
+
+      baton->data_buffer.Reset();
 
       if (baton->error) {
         Local<Value> err = Nan::Error(baton->error_message);
@@ -310,10 +350,11 @@ public:
             }
           }
           argv[1] = Local<Value>(results);
-        } else if (baton->result)
+        } else if (baton->result) {
           argv[1] = Local<Value>(Nan::New<String>(baton->result).ToLocalChecked());
-        else 
+        } else  {
           argv[1] = Local<Value>(Nan::New<String>().ToLocalChecked());
+        }
 
         if (baton->result)
           free((void*)baton->result);
@@ -321,7 +362,7 @@ public:
         baton->callback->Call(2, argv);
       }
 
-      if (baton->dataIsPath)
+      if (baton->data_is_path)
         free(baton->data);
       delete baton->callback;
       delete baton;
@@ -336,8 +377,9 @@ public:
           && args[0]->ToString()->Length() > 0) {
         String::Utf8Value str(args[0]->ToString());
         fallbackPath = strdup((const char*)(*str));
-      } else
-        fallbackPath = NULL;
+      } else {
+        fallbackPath = nullptr;
+      }
 
       return args.GetReturnValue().Set(args.This());
     }
