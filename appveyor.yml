@@ -1,25 +1,33 @@
 # http://www.appveyor.com/docs/appveyor-yml
 
-# This image contains both 2013 and 2015
-os: Visual Studio 2015
-
 # Test against these versions of Node.js.
 environment:
   matrix:
     - nodejs_version: "4"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "4"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "6"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "6"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "8"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "8"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "10"
+      os: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
+    - nodejs_version: "12"
+      os: Visual Studio 2017
+      GYP_MSVS_VERSION: "2017"
+
 
 # Install scripts. (runs after repo cloning)
 install:
