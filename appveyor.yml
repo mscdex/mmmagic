@@ -1,52 +1,42 @@
-# http://www.appveyor.com/docs/appveyor-yml
-
-# Test against these versions of Node.js.
 environment:
   matrix:
     - nodejs_version: "4"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "4"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "6"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "6"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "8"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2013"
     - nodejs_version: "8"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "10"
-      os: Visual Studio 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       GYP_MSVS_VERSION: "2015"
     - nodejs_version: "12"
-      os: Visual Studio 2017
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GYP_MSVS_VERSION: "2017"
 
 
-# Install scripts. (runs after repo cloning)
 install:
-  # Get the latest stable version of Node
   - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) x64
-  # Typical npm stuff.
   - set CL=-DDELAYIMP_INSECURE_WRITABLE_HOOKS
   - npm install
 
-# Post-install test scripts.
 test_script:
-  # Output useful info for debugging.
+  - echo %APPVEYOR_BUILD_WORKER_IMAGE%
   - node --version
   - npm --version
-  # run tests
   - npm test
 
-# Don't actually build.
 build: off
-
-# Set build version format here instead of in the admin panel.
+shallow_clone: true
 version: "{build}"
