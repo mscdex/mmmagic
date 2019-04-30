@@ -32,7 +32,7 @@ environment:
 # Install scripts. (runs after repo cloning)
 install:
   # Get the latest stable version of Node
-  - ps: Install-Product node $env:nodejs_version x64
+  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version) x64
   # Typical npm stuff.
   - set CL=-DDELAYIMP_INSECURE_WRITABLE_HOOKS
   - npm install
