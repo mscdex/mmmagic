@@ -98,6 +98,32 @@ var tests = [
     },
     what: 'detect - Normal operation, mime type'
   },
+  { run: function() {
+      var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+      magic.detectFileAsync(path.join(__dirname, '..', 'src', 'binding.cc'))
+        .then(result => {
+          assert.strictEqual(result, 'text/x-c++');
+          next();
+        });
+    },
+    what: 'detectFileAsync - Normal operation'
+  },
+  { run: function() {
+      var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+      assert.rejects(magic.detectFileAsync('/no/such/path1234567')).then(next);
+    },
+    what: 'detectFileAsync - Error'
+  },
+  { run: function() {
+      var buf = fs.readFileSync(path.join(__dirname, '..', 'src', 'binding.cc'));
+      var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+      magic.detectAsync(buf).then(result => {
+          assert.strictEqual(result, 'text/x-c++');
+          next();
+        });
+    },
+    what: 'detectAsync - Normal operation'
+  }
 ];
 
 function next() {
