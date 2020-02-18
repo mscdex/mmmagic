@@ -78,7 +78,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
-      magic.detectFile(path.join(__dirname, 'fixtures', 'tést.txt'),
+      magic.detectFile(path.join(__dirname, 'fixtures', 'test.txt'),
                        function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(result, 'text/x-c++');
