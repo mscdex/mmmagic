@@ -27,7 +27,7 @@
  */
 /*
  * file.h - definitions for file(1) program
- * @(#)$File: file.h,v 1.183 2017/08/28 13:39:18 christos Exp $
+ * @(#)$File: file.h,v 1.213 2020/03/08 21:30:06 christos Exp $
  */
 
 #ifndef __file_h__
@@ -40,39 +40,8 @@
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
 #endif
-
-// XXX: change by mscdex
-#ifdef _MSC_VER
-typedef unsigned int mode_t;
-# ifdef _WIN64
-   typedef __int64 ssize_t;
-   typedef unsigned __int64 size_t;
-# else
-   typedef _W64 int ssize_t;
-   typedef _W64 unsigned int size_t;
-# endif
-# include <io.h>
-#	define access _access
-# define lseek _lseek
-# define read _read
-# define	X_OK	1	/* MS access() doesn't check for execute permission. */
-# define	W_OK	2	/* Check for write permission */
-# define	R_OK	4	/* Check for read permission */
-# include <sys/utime.h>
-# include <dirent.h>
-# undef S_IFLNK
-# undef S_IFSOCK
-# ifndef S_IFFIFO
-#  ifdef _S_IFIFO
-#   define S_IFFIFO _S_IFIFO
-#  else
-#   define S_IFFIFO 0
-#  endif
-# endif
-# define strtoull _strtoui64
-# define STDIN_FILENO 0
-#else
-# include <unistd.h>
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
 #endif
 
 #ifdef WIN32
@@ -100,8 +69,7 @@ typedef unsigned int mode_t;
 #include <regex.h>
 #include <time.h>
 #include <sys/types.h>
-// XXX: change by mscdex
-#ifndef _MSC_VER
+#ifndef WIN32
 #include <sys/param.h>
 #endif
 /* Do this here and now, because struct stat gets re-defined on solaris */
@@ -165,20 +133,33 @@ typedef unsigned int mode_t;
 #ifndef FILE_BYTES_MAX
 # define FILE_BYTES_MAX (1024 * 1024)	/* how much of the file to look at */
 #endif
+#define FILE_BADSIZE CAST(size_t, ~0ul)
 #define MAXMAGIS 8192		/* max entries in any one magic file
 				   or directory */
 #define MAXDESC	64		/* max len of text description/MIME type */
 #define MAXMIME	80		/* max len of text MIME type */
-#define MAXstring 96		/* max len of "string" types */
+#define MAXstring 128		/* max len of "string" types */
 
 #define MAGICNO		0xF11E041C
-#define VERSIONNO	14
-#define FILE_MAGICSIZE	344
+#define VERSIONNO	15
+#define FILE_MAGICSIZE	376
+
+#define FILE_GUID_SIZE	sizeof("XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX")
 
 #define	FILE_LOAD	0
 #define FILE_CHECK	1
 #define FILE_COMPILE	2
 #define FILE_LIST	3
+
+struct buffer {
+	int fd;
+	struct stat st;
+	const void *fbuf;
+	size_t flen;
+	off_t eoff;
+	void *ebuf;
+	size_t elen;
+};
 
 union VALUETYPE {
 	uint8_t b;
@@ -190,6 +171,7 @@ union VALUETYPE {
 	uint8_t hq[8];	/* 8 bytes of a fixed-endian "quad" */
 	char s[MAXstring];	/* the search string or regex pattern */
 	unsigned char us[MAXstring];
+	uint64_t guid[2];
 	float f;
 	double d;
 };
@@ -263,7 +245,8 @@ struct magic {
 #define				FILE_USE	46
 #define				FILE_CLEAR	47
 #define				FILE_DER	48
-#define				FILE_NAMES_SIZE	49 /* size of array to contain all names */
+#define				FILE_GUID	49
+#define				FILE_NAMES_SIZE	50 /* size of array to contain all names */
 
 #define IS_STRING(t) \
 	((t) == FILE_STRING || \
@@ -322,7 +305,7 @@ struct magic {
 #endif /* ENABLE_CONDITIONALS */
 
 	/* Word 4 */
-	uint32_t offset;	/* offset to magic number */
+	int32_t offset;		/* offset to magic number */
 	/* Word 5 */
 	int32_t in_offset;	/* offset from indirection */
 	/* Word 6 */
@@ -404,7 +387,7 @@ struct mlist {
 #define CCAST(T, b)	const_cast<T>(b)
 #else
 #define CAST(T, b)	((T)(b))
-#define RCAST(T, b)	((T)(b))
+#define RCAST(T, b)	((T)(uintptr_t)(b))
 #define CCAST(T, b)	((T)(uintptr_t)(b))
 #endif
 
@@ -427,15 +410,19 @@ struct magic_set {
 	} c;
 	struct out {
 		char *buf;		/* Accumulation buffer */
+		size_t blen;		/* Length of buffer */
 		char *pbuf;		/* Printable buffer */
 	} o;
-	uint32_t offset;
+	uint32_t offset;		/* a copy of m->offset while we */
+					/* are working on the magic entry */
+	uint32_t eoffset;		/* offset from end of file */
 	int error;
 	int flags;			/* Control magic tests. */
 	int event_flags;		/* Note things that happened. */
 #define 		EVENT_HAD_ERR		0x01
 	const char *file;
 	size_t line;			/* current magic line number */
+	mode_t mode;			/* copy of current stat mode */
 
 	/* data for searches */
 	struct {
@@ -469,37 +456,42 @@ typedef unsigned long unichar;
 struct stat;
 #define FILE_T_LOCAL	1
 #define FILE_T_WINDOWS	2
-protected const char *file_fmttime(uint64_t, int, char *);
+protected const char *file_fmttime(char *, size_t, uint64_t, int);
 protected struct magic_set *file_ms_alloc(int);
 protected void file_ms_free(struct magic_set *);
-protected int file_buffer(struct magic_set *, int, const char *, const void *,
-    size_t);
+protected int file_default(struct magic_set *, size_t);
+protected int file_buffer(struct magic_set *, int, struct stat *, const char *,
+    const void *, size_t);
 protected int file_fsmagic(struct magic_set *, const char *, struct stat *);
 protected int file_pipe2file(struct magic_set *, int, const void *, size_t);
 protected int file_vprintf(struct magic_set *, const char *, va_list)
     __attribute__((__format__(__printf__, 2, 0)));
+protected int file_separator(struct magic_set *);
+protected char *file_copystr(char *, size_t, size_t, const char *);
+protected int file_checkfmt(char *, size_t, const char *);
 protected size_t file_printedlen(const struct magic_set *);
+protected int file_print_guid(char *, size_t, const uint64_t *);
+protected int file_parse_guid(const char *, uint64_t *);
 protected int file_replace(struct magic_set *, const char *, const char *);
 protected int file_printf(struct magic_set *, const char *, ...)
     __attribute__((__format__(__printf__, 2, 3)));
 protected int file_reset(struct magic_set *, int);
-protected int file_tryelf(struct magic_set *, int, const unsigned char *,
-    size_t);
-protected int file_trycdf(struct magic_set *, int, const unsigned char *,
-    size_t);
+protected int file_tryelf(struct magic_set *, const struct buffer *);
+protected int file_trycdf(struct magic_set *, const struct buffer *);
 #if HAVE_FORK
-protected int file_zmagic(struct magic_set *, int, const char *,
-    const unsigned char *, size_t);
+protected int file_zmagic(struct magic_set *, const struct buffer *,
+    const char *);
 #endif
-protected int file_ascmagic(struct magic_set *, const unsigned char *, size_t,
+protected int file_ascmagic(struct magic_set *, const struct buffer *,
     int);
 protected int file_ascmagic_with_encoding(struct magic_set *,
-    const unsigned char *, size_t, unichar *, size_t, const char *,
-    const char *, int);
-protected int file_encoding(struct magic_set *, const unsigned char *, size_t,
+    const struct buffer *, unichar *, size_t, const char *, const char *, int);
+protected int file_encoding(struct magic_set *, const struct buffer *,
     unichar **, size_t *, const char **, const char **, const char **);
-protected int file_is_tar(struct magic_set *, const unsigned char *, size_t);
-protected int file_softmagic(struct magic_set *, const unsigned char *, size_t,
+protected int file_is_json(struct magic_set *, const struct buffer *);
+protected int file_is_csv(struct magic_set *, const struct buffer *, int);
+protected int file_is_tar(struct magic_set *, const struct buffer *);
+protected int file_softmagic(struct magic_set *, const struct buffer *,
     uint16_t *, uint16_t *, int, int);
 protected int file_apprentice(struct magic_set *, const char *, int);
 protected int buffer_apprentice(struct magic_set *, struct magic **,
@@ -524,17 +516,22 @@ protected ssize_t sread(int, void *, size_t, int);
 protected int file_check_mem(struct magic_set *, unsigned int);
 protected int file_looks_utf8(const unsigned char *, size_t, unichar *,
     size_t *);
-protected size_t file_pstring_length_size(const struct magic *);
-protected size_t file_pstring_get_length(const struct magic *, const char *);
-protected char * file_printable(char *, size_t, const char *);
+protected size_t file_pstring_length_size(struct magic_set *,
+    const struct magic *);
+protected size_t file_pstring_get_length(struct magic_set *,
+    const struct magic *, const char *);
+protected char * file_printable(char *, size_t, const char *, size_t);
 #ifdef __EMX__
 protected int file_os2_apptype(struct magic_set *, const char *, const void *,
     size_t);
 #endif /* __EMX__ */
 
-#if defined(HAVE_LOCALE_H)
+protected void buffer_init(struct buffer *, int, const struct stat *,
+    const void *, size_t);
+protected void buffer_fini(struct buffer *);
+protected int buffer_fill(const struct buffer *);
+
 #include <locale.h>
-#endif
 #if defined(HAVE_XLOCALE_H)
 #include <xlocale.h>
 #endif
@@ -560,6 +557,7 @@ protected void file_regerror(file_regex_t *, int, struct magic_set *);
 
 typedef struct {
 	char *buf;
+	size_t blen;
 	uint32_t offset;
 } file_pushbuf_t;
 
@@ -569,17 +567,6 @@ protected char  *file_pop_buffer(struct magic_set *, file_pushbuf_t *);
 #ifndef COMPILE_ONLY
 extern const char *file_names[];
 extern const size_t file_nnames;
-#endif
-
-#ifndef HAVE_STRERROR
-extern int sys_nerr;
-extern char *sys_errlist[];
-#define strerror(e) \
-	(((e) >= 0 && (e) < sys_nerr) ? sys_errlist[(e)] : "Unknown error")
-#endif
-
-#ifndef HAVE_STRTOUL
-#define strtoul(a, b, c)	strtol(a, b, c)
 #endif
 
 #ifndef HAVE_PREAD
@@ -621,9 +608,32 @@ struct tm *gmtime_r(const time_t *, struct tm *);
 struct tm *localtime_r(const time_t *, struct tm *);
 #endif
 #ifndef HAVE_FMTCHECK
-const char *fmtcheck(const char *, const char *) 
+const char *fmtcheck(const char *, const char *)
      __attribute__((__format_arg__(2)));
 #endif
+
+#ifdef HAVE_LIBSECCOMP
+// basic filter
+// this mode should not interfere with normal operations
+// only some dangerous syscalls are blacklisted
+int enable_sandbox_basic(void);
+
+// enhanced filter
+// this mode allows only the necessary syscalls used during normal operation
+// extensive testing required !!!
+int enable_sandbox_full(void);
+#endif
+
+protected const char *file_getprogname(void);
+protected void file_setprogname(const char *);
+protected void file_err(int, const char *, ...)
+    __attribute__((__format__(__printf__, 2, 3), __noreturn__));
+protected void file_errx(int, const char *, ...)
+    __attribute__((__format__(__printf__, 2, 3), __noreturn__));
+protected void file_warn(const char *, ...)
+    __attribute__((__format__(__printf__, 1, 2)));
+protected void file_warnx(const char *, ...)
+    __attribute__((__format__(__printf__, 1, 2)));
 
 #if defined(HAVE_MMAP) && defined(HAVE_SYS_MMAN_H) && !defined(QUICK)
 #define QUICK
@@ -631,6 +641,9 @@ const char *fmtcheck(const char *, const char *)
 
 #ifndef O_BINARY
 #define O_BINARY	0
+#endif
+#ifndef O_NONBLOCK
+#define O_NONBLOCK	0
 #endif
 
 #ifndef __cplusplus
