@@ -88,6 +88,28 @@ var tests = [
     what: 'detectFile - UTF-8 filename'
   },
   { run: function() {
+      var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+      magic.detectFile(path.join(__dirname, 'fixtures', 'doc_as_zip.docx'),
+                     function(err, result) {
+        assert.strictEqual(err, null);
+        assert.strictEqual(result, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        next();
+      });
+    },
+    what: 'detectFile - UTF-8 filename'
+  },
+  { run: function() {
+      var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
+      magic.detectFile(path.join(__dirname, 'fixtures', 'doc_as_doc.docx'),
+                     function(err, result) {
+        assert.strictEqual(err, null);
+        assert.strictEqual(result, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        next();
+      });
+    },
+    what: 'detectFile - UTF-8 filename'
+  },
+  { run: function() {
       var buf = fs.readFileSync(path.join(__dirname, '..', 'src', 'binding.cc'));
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
       magic.detect(buf, function(err, result) {
