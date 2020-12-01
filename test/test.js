@@ -96,7 +96,7 @@ var tests = [
         next();
       });
     },
-    what: 'detectFile - UTF-8 filename'
+    what: 'detectFile - docx as zip file'
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
@@ -107,7 +107,7 @@ var tests = [
         next();
       });
     },
-    what: 'detectFile - UTF-8 filename'
+    what: 'detectFile - docx as docx file'
   },
   { run: function() {
       var buf = fs.readFileSync(path.join(__dirname, '..', 'src', 'binding.cc'));
