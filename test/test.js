@@ -89,7 +89,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
-      magic.detectFile(path.join(__dirname, 'fixtures', 'potential_zip.docx'),
+      magic.detectFile(path.join(__dirname, 'fixtures', 'doc_as_zip.docx'),
                      function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(result, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -100,7 +100,7 @@ var tests = [
   },
   { run: function() {
       var magic = new mmm.Magic(mmm.MAGIC_MIME_TYPE);
-      magic.detectFile(path.join(__dirname, 'fixtures', 'not_zip.docx'),
+      magic.detectFile(path.join(__dirname, 'fixtures', 'doc_as_doc.docx'),
                      function(err, result) {
         assert.strictEqual(err, null);
         assert.strictEqual(result, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
