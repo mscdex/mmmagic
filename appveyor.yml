@@ -24,6 +24,12 @@ environment:
     - nodejs_version: "12"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GYP_MSVS_VERSION: "2017"
+    - nodejs_version: "14"
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      GYP_MSVS_VERSION: "2017"
+    - nodejs_version: "14"
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      GYP_MSVS_VERSION: "2019"
 
 
 install:
