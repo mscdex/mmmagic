@@ -21,9 +21,9 @@
       'conditions': [
         ['OS=="mac"', {
           'xcode_settings': {
-            'MACOSX_DEPLOYMENT_TARGET': '10.7',
+            'MACOSX_DEPLOYMENT_TARGET': '13.4',
             'GCC_VERSION': 'com.apple.compilers.llvm.clang.1_0',
-            'CLANG_CXX_LANGUAGE_STANDARD': 'gnu++1y',  # -std=gnu++1y
+            'CLANG_CXX_LANGUAGE_STANDARD': 'gnu++20',  # -std=gnu++1y | 1y is gnu++14 but we can safely update to 2020 version
             'CLANG_CXX_LIBRARY': 'libc++',
           }
         }],
