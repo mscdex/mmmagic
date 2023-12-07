@@ -21,9 +21,9 @@
       'conditions': [
         ['OS=="mac"', {
           'xcode_settings': {
-            'MACOSX_DEPLOYMENT_TARGET': '10.7',
+            'MACOSX_DEPLOYMENT_TARGET': '10.15',
             'GCC_VERSION': 'com.apple.compilers.llvm.clang.1_0',
-            'CLANG_CXX_LANGUAGE_STANDARD': 'gnu++1y',  # -std=gnu++1y
+            'CLANG_CXX_LANGUAGE_STANDARD': 'c++17',  # -std=gnu++1y
             'CLANG_CXX_LIBRARY': 'libc++',
           }
         }],
