@@ -1,18 +1,18 @@
 {
   "name": "mmmagic",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "author": "Brian White <mscdex@mscdex.net>",
   "description": "An async libmagic binding for node.js for detecting content types by data inspection",
   "main": "./lib/index",
   "dependencies": {
-    "nan": "^2.13.2"
+    "nan": "^2.17.0"
   },
   "scripts": {
     "install": "node-gyp rebuild",
     "test": "node test/test.js"
   },
   "engines": {
-    "node": ">=4.0.0"
+    "node": ">=20.0.0"
   },
   "keywords": [
     "magic",
