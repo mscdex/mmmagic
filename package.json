@@ -5,7 +5,7 @@
   "description": "An async libmagic binding for node.js for detecting content types by data inspection",
   "main": "./lib/index",
   "dependencies": {
-    "nan": "^2.13.2"
+    "nan": "^2.20.0"
   },
   "scripts": {
     "install": "node-gyp rebuild",
