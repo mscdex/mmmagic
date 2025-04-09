@@ -281,8 +281,11 @@ public:
         }
         if (fd == -1) {
           detect_req->free_error = false;
-          detect_req->error_message = "Error while opening file";
-          magic_close(magic);
+					const char *error_msg = "Error while opening file";
+					char* copy = static_cast<char*>(malloc(strlen(error_msg) + 1));
+					strcpy(copy, error_msg);
+					detect_req->error_message = copy;
+					magic_close(magic);
           return;
         }
         result = magic_descriptor(magic, fd);
